@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_radio/flutter_radio.dart';
+//import 'package:flutter_radio/flutter_radio.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import './config.dart';
 import './models/radio_station.dart';
@@ -34,6 +37,7 @@ class _MyHomePageState extends State<MyHomePage> {
   PlayerState _playerState = PlayerState.STOPPED;
   StationList _externalStationsList = new StationList();
   List<RadioStation> _radioList = StationList.list;
+  AudioPlayer audioPlayer = AudioPlayer();
 
   _getMoreStations() {
     _externalStationsList.parseStreemaStationsInfo().then((stationsList) {
@@ -48,6 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    AudioPlayer.logEnabled = true;
     _getMoreStations();
   }
 
@@ -63,10 +68,11 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _play() {
+  void _play() async {
     if (_playerState != PlayerState.PLAYING) {
       try {
-        FlutterRadio.play(url: this._radioList[_selectedIndex].url);
+        var _ = await audioPlayer.play(this._radioList[_selectedIndex].url);
+        _setNotification();
         setState(() => this._playerState = PlayerState.PLAYING);
       } catch (e) {
         print(e);
@@ -74,10 +80,18 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _setNotification() {
+    if (Platform.isIOS) {
+      audioPlayer.setNotification(
+        title: this._radioList[_selectedIndex].name,
+        artist: this._radioList[_selectedIndex].frequency.toString(),
+      );
+    }
+  }
+
   void _pause() {
     if (_playerState == PlayerState.PLAYING) {
       try {
-        FlutterRadio.pause(url: this._radioList[_selectedIndex].url);
         setState(() => this._playerState = PlayerState.PAUSED);
       } catch (e) {
         print(e);
@@ -85,11 +99,11 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _stop() {
+  void _stop() async {
     if (_playerState == PlayerState.PAUSED ||
         _playerState == PlayerState.PLAYING) {
       try {
-        FlutterRadio.stop();
+        await audioPlayer.stop();
         setState(() => this._playerState = PlayerState.STOPPED);
       } catch (e) {
         print(e);
@@ -138,7 +152,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    FlutterRadio.stop();
+//    FlutterRadio.stop();
     super.dispose();
   }
 
