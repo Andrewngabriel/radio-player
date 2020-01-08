@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_radio/flutter_radio.dart';
 
 import '../playerState.dart';
 
@@ -30,22 +27,6 @@ class Player extends StatefulWidget {
 }
 
 class _PlayerState extends State<Player> {
-  @override
-  void initState() {
-    super.initState();
-    _audioStart();
-  }
-
-  Future<void> _audioStart() async {
-    await FlutterRadio.audioStart();
-  }
-
-  @override
-  void dispose() {
-    FlutterRadio.stop();
-    super.dispose();
-  }
-
   Icon _playBtnIcon() {
     if (widget.state == PlayerState.PLAYING) {
       return Icon(
@@ -82,15 +63,10 @@ class _PlayerState extends State<Player> {
           colors: [
             Color(0xFF263241),
             Color(0xFF413f6A),
-//            Color(0xFF7D3F80),
-//            Color(0xFFC02F75),
-//            Color(0xFFF1304C),
           ],
         ),
       ),
       child: Row(
-//        mainAxisSize: MainAxisSize.min,
-//        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Expanded(
             child: Padding(
@@ -108,7 +84,6 @@ class _PlayerState extends State<Player> {
               size: 30,
             ),
             padding: EdgeInsets.only(top: 5, right: 20.0),
-//            alignment: Alignment.bottomCenter,
             onPressed: () => widget.pause(),
           ),
           IconButton(
@@ -116,17 +91,6 @@ class _PlayerState extends State<Player> {
             onPressed: _playPause,
             padding: EdgeInsets.only(right: 0.0),
           ),
-//          Expanded(
-//            flex: 1,
-//            child: Row(
-//              crossAxisAlignment: CrossAxisAlignment.center,
-//              mainAxisAlignment: MainAxisAlignment.center,
-//              mainAxisSize: MainAxisSize.max,
-//              children: <Widget>[
-//
-//              ],
-//            ),
-//          ),
         ],
       ),
     );
