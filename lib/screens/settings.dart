@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config.dart';
+import '../utils/config.dart';
 
 class SettingsScreen extends StatelessWidget {
   @override
