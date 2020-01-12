@@ -1,16 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-//import 'package:flutter_radio/flutter_radio.dart';
-import 'package:audioplayers/audioplayers.dart';
 
-import './config.dart';
 import './models/radio_station.dart';
 import './models/station_list.dart';
-import './playerState.dart';
 import './widgets/bottom_navigation.dart';
 import './widgets/player.dart';
 import './widgets/radio_card.dart';
+import 'utils/config.dart';
 
 void main() => runApp(MyApp());
 
@@ -34,10 +29,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
   bool _listLayoutState = false;
-  PlayerState _playerState = PlayerState.STOPPED;
   StationList _externalStationsList = new StationList();
   List<RadioStation> _radioList = StationList.list;
-  AudioPlayer audioPlayer = AudioPlayer();
 
   _getMoreStations() {
     _externalStationsList.parseStreemaStationsInfo().then((stationsList) {
@@ -52,62 +45,16 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    AudioPlayer.logEnabled = true;
     _getMoreStations();
   }
 
   void _selectStation(int index) async {
     if (this._selectedIndex != index) {
-      _stop();
       setState(() {
         this._radioList[_selectedIndex].selected = false;
         this._selectedIndex = index;
         this._radioList[this._selectedIndex].selected = true;
       });
-      _play();
-    }
-  }
-
-  void _play() async {
-    if (_playerState != PlayerState.PLAYING) {
-      try {
-        var _ = await audioPlayer.play(this._radioList[_selectedIndex].url);
-        _setNotification();
-        setState(() => this._playerState = PlayerState.PLAYING);
-      } catch (e) {
-        print(e);
-      }
-    }
-  }
-
-  void _setNotification() {
-    if (Platform.isIOS) {
-      audioPlayer.setNotification(
-        title: this._radioList[_selectedIndex].name,
-        artist: this._radioList[_selectedIndex].frequency.toString(),
-      );
-    }
-  }
-
-  void _pause() {
-    if (_playerState == PlayerState.PLAYING) {
-      try {
-        setState(() => this._playerState = PlayerState.PAUSED);
-      } catch (e) {
-        print(e);
-      }
-    }
-  }
-
-  void _stop() async {
-    if (_playerState == PlayerState.PAUSED ||
-        _playerState == PlayerState.PLAYING) {
-      try {
-        await audioPlayer.stop();
-        setState(() => this._playerState = PlayerState.STOPPED);
-      } catch (e) {
-        print(e);
-      }
     }
   }
 
@@ -148,12 +95,6 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       }).toList(),
     );
-  }
-
-  @override
-  void dispose() {
-//    FlutterRadio.stop();
-    super.dispose();
   }
 
   @override
@@ -201,10 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
               title: _radioList[_selectedIndex].name,
               freq: _radioList[_selectedIndex].frequency,
               url: _radioList[_selectedIndex].url,
-              play: this._play,
-              pause: this._pause,
-              stop: this._stop,
-              state: this._playerState,
+              index: _selectedIndex,
             ),
             BottomNavigation(),
           ],
