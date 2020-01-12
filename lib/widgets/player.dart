@@ -1,4 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_media_notification/flutter_media_notification.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../playerState.dart';
 
@@ -6,48 +12,83 @@ class Player extends StatefulWidget {
   final String title;
   final double freq;
   final String url;
-  final Function play;
-  final Function pause;
-  final Function stop;
-  final PlayerState state;
+  final int index;
 
   Player({
     Key key,
     @required this.title,
     @required this.freq,
     @required this.url,
-    @required this.play,
-    @required this.pause,
-    @required this.stop,
-    @required this.state,
+    @required this.index,
   }) : super(key: key);
 
   @override
   _PlayerState createState() => _PlayerState();
 }
 
-class _PlayerState extends State<Player> {
-  Icon _playBtnIcon() {
-    if (widget.state == PlayerState.PLAYING) {
-      return Icon(
-        Icons.pause_circle_filled,
-        color: Colors.white,
-        size: 50,
-      );
-    } else {
-      return Icon(
-        Icons.play_circle_outline,
-        color: Colors.white,
-        size: 50,
+class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
+  SharedPreferences prefs;
+  List<String> favoriteIndexes = List<String>();
+
+  AnimationController _playBtnController;
+  AudioPlayer _audioPlayer;
+  AudioPlayerState _audioPlayerState;
+  Duration _duration;
+  Duration _position;
+
+  PlayerState _playerState = PlayerState.STOPPED;
+  StreamSubscription _durationSubscription;
+  StreamSubscription _positionSubscription;
+  StreamSubscription _playerCompleteSubscription;
+  StreamSubscription _playerErrorSubscription;
+  StreamSubscription _playerStateSubscription;
+
+  get _isPlaying => _playerState == PlayerState.PLAYING;
+  get _isPaused => _playerState == PlayerState.PAUSED;
+
+  @override
+  void initState() {
+    super.initState();
+    this._initAudioPlayer();
+    this._playBtnController =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 300));
+    MediaNotification.setListener('play', this._play);
+    MediaNotification.setListener('pause', this._pause);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    this._audioPlayer.stop();
+    this._playerCompleteSubscription?.cancel();
+    this._playerErrorSubscription?.cancel();
+    this._playerStateSubscription?.cancel();
+    this._playBtnController.dispose();
+  }
+
+  @override
+  void didUpdateWidget(Player oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    this._stop();
+    this._play();
+  }
+
+  void _setNotification() {
+    if (Platform.isIOS) {
+      _audioPlayer.setNotification(
+        title: widget.title,
+        artist: widget.freq.toString(),
       );
     }
   }
 
-  void _playPause() {
-    if (widget.state == PlayerState.PLAYING) {
-      widget.stop();
+  void _playPause() async {
+    if (_playerState == PlayerState.PLAYING) {
+      this._stop();
+      await this._playBtnController.forward().orCancel;
     } else {
-      widget.play();
+      this._play();
+      await this._playBtnController.reverse().orCancel;
     }
   }
 
@@ -84,15 +125,86 @@ class _PlayerState extends State<Player> {
               size: 30,
             ),
             padding: EdgeInsets.only(top: 5, right: 20.0),
-            onPressed: () => widget.pause(),
+            onPressed: () {},
           ),
           IconButton(
-            icon: this._playBtnIcon(),
-            onPressed: _playPause,
+            icon: AnimatedIcon(
+              icon: (_playerState == PlayerState.LOADING)
+                  ? AnimatedIcons.close_menu
+                  : AnimatedIcons.pause_play,
+              progress: _playBtnController,
+            ),
+            color: Colors.white,
+            iconSize: 50,
+            onPressed: this._playPause,
             padding: EdgeInsets.only(right: 0.0),
           ),
         ],
       ),
     );
+  }
+
+  void _initAudioPlayer() {
+    _audioPlayer = new AudioPlayer();
+
+    _playerCompleteSubscription =
+        _audioPlayer.onPlayerCompletion.listen((event) {
+      _onComplete();
+      setState(() => _position = _duration);
+    });
+
+    _playerErrorSubscription = _audioPlayer.onPlayerError.listen((msg) {
+      print('audioPlayer error : $msg');
+      setState(() {
+        _playerState = PlayerState.STOPPED;
+        _duration = Duration(seconds: 0);
+        _position = Duration(seconds: 0);
+      });
+    });
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      print(state);
+      if (!mounted) return;
+      setState(() => _audioPlayerState = state);
+    });
+  }
+
+  Future<int> _play() async {
+    final playPosition = (_position != null &&
+            _duration != null &&
+            _position.inMilliseconds > 0 &&
+            _position.inMilliseconds < _duration.inMilliseconds)
+        ? _position
+        : null;
+    final url = widget.url;
+    setState(() => _playerState = PlayerState.LOADING);
+    final result = await _audioPlayer.play(url, position: playPosition);
+    if (result == 1) setState(() => _playerState = PlayerState.PLAYING);
+
+    _audioPlayer.setPlaybackRate(playbackRate: 1.0);
+
+    return result;
+  }
+
+  Future<int> _pause() async {
+    final result = await _audioPlayer.pause();
+    if (result == 1) setState(() => _playerState = PlayerState.PAUSED);
+    return result;
+  }
+
+  Future<int> _stop() async {
+    final result = await _audioPlayer.stop();
+    if (result == 1) {
+      setState(() {
+        _playerState = PlayerState.STOPPED;
+        _position = Duration();
+      });
+    }
+    MediaNotification.hideNotification();
+    return result;
+  }
+
+  void _onComplete() {
+    setState(() => _playerState = PlayerState.STOPPED);
   }
 }
