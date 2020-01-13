@@ -5,25 +5,16 @@ import '../utils/config.dart';
 class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0.0,
-        title: Text(
-          "Settings",
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-      body: Container(
-        padding: EdgeInsets.fromLTRB(10.0, 10.0, 10, 0.0),
-        decoration: Config.backgroundGradient(),
-        child: ListView(
-          children: <Widget>[
-            Text(
-              "Settings!",
-              style: TextStyle(color: Colors.white, fontSize: 40),
-            ),
-          ],
-        ),
+    return Container(
+      decoration: Config.backgroundGradient(),
+      child: GridView.count(
+        crossAxisCount: 1,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        padding: EdgeInsets.all(10.0),
+        children: <Widget>[
+          Text("Hello!"),
+        ],
       ),
     );
   }
