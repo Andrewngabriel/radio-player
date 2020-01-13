@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
+import './screens/favorites.dart';
+import './screens/settings.dart';
+import './screens/stations.dart';
 import './widgets/bottom_navigation.dart';
 import './widgets/player.dart';
-import './widgets/radio_card.dart';
 import 'utils/config.dart';
 
 void main() => runApp(MyApp());
@@ -27,10 +29,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
-  bool _listLayoutState = false;
-  StationList _externalStationsList = new StationList();
+  int _selectedStationIndex = 0;
+  int _selectedPageIndex = 0;
+  StationList _externalStationsList = StationList();
   List<RadioStation> _radioList = StationList.list;
+  List _screens;
 
   _getMoreStations() {
     _externalStationsList.parseStreemaStationsInfo().then((stationsList) {
@@ -45,56 +48,38 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _getMoreStations();
+//    _getMoreStations();
+    _screens = [
+      StationsScreen(stations: _radioList, selectStation: this._selectStation),
+      FavoritesScreen(selectStation: _selectStation),
+      SettingsScreen(),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(MyHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
   }
 
   void _selectStation(int index) async {
-    if (this._selectedIndex != index) {
+    print("Homepage ~ _selectStation()");
+    if (this._selectedStationIndex != index) {
       setState(() {
-        this._radioList[_selectedIndex].selected = false;
-        this._selectedIndex = index;
-        this._radioList[this._selectedIndex].selected = true;
+        this._radioList[_selectedStationIndex].selected = false;
+        this._selectedStationIndex = index;
+        this._radioList[this._selectedStationIndex].selected = true;
+        refreshHome();
       });
     }
   }
 
-  Widget _gridLayout() {
-    return GridView.count(
-      crossAxisCount: 3,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      padding: EdgeInsets.all(10.0),
-      children: _radioList.map((station) {
-        int index = _radioList.indexOf(station);
-        return RadioCard(
-          station.name,
-          station.frequency,
-          station.url,
-          index,
-          station.selected,
-          this._selectStation,
-        );
-      }).toList(),
-    );
+  void refreshHome() {
+    _screens[0] = StationsScreen(
+        stations: _radioList, selectStation: this._selectStation);
   }
 
-  Widget _listLayout() {
-    return ListView(
-      children: _radioList.map((station) {
-        int index = _radioList.indexOf(station);
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5.0),
-          child: RadioCard(
-            station.name,
-            station.frequency,
-            station.url,
-            index,
-            station.selected,
-            this._selectStation,
-          ),
-        );
-      }).toList(),
-    );
+  void changeScreen(BuildContext ctx, int index) {
+    setState(() => _selectedPageIndex = index);
   }
 
   @override
@@ -106,32 +91,16 @@ class _MyHomePageState extends State<MyHomePage> {
         actions: <Widget>[
           IconButton(
             icon: Icon(
-              Icons.list,
+              Icons.share,
               color: Colors.white,
               size: 35,
             ),
             padding: EdgeInsets.only(right: 5.0),
-            onPressed: () {
-              setState(() => _listLayoutState = true);
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.view_column,
-              color: Colors.white,
-              size: 35,
-            ),
-            padding: EdgeInsets.only(right: 5.0),
-            onPressed: () {
-              setState(() => _listLayoutState = false);
-            },
+            onPressed: () {},
           ),
         ],
       ),
-      body: Container(
-        decoration: Config.backgroundGradient(),
-        child: (_listLayoutState) ? _listLayout() : _gridLayout(),
-      ),
+      body: this._screens[this._selectedPageIndex],
       bottomNavigationBar: Container(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -139,12 +108,15 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             Player(
-              title: _radioList[_selectedIndex].name,
-              freq: _radioList[_selectedIndex].frequency,
-              url: _radioList[_selectedIndex].url,
-              index: _selectedIndex,
+              title: _radioList[_selectedStationIndex].name,
+              freq: _radioList[_selectedStationIndex].frequency,
+              url: _radioList[_selectedStationIndex].url,
+              index: _selectedStationIndex,
             ),
-            BottomNavigation(),
+            BottomNavigation(
+              changeScreen: this.changeScreen,
+              menuIndex: this._selectedPageIndex,
+            ),
           ],
         ),
       ),
