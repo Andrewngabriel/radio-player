@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_radio/flutter_radio.dart';
 
-import './config.dart';
 import './models/radio_station.dart';
 import './models/station_list.dart';
-import './playerState.dart';
 import './widgets/bottom_navigation.dart';
 import './widgets/player.dart';
 import './widgets/radio_card.dart';
+import 'utils/config.dart';
 
 void main() => runApp(MyApp());
 
@@ -31,7 +29,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
   bool _listLayoutState = false;
-  PlayerState _playerState = PlayerState.STOPPED;
   StationList _externalStationsList = new StationList();
   List<RadioStation> _radioList = StationList.list;
 
@@ -53,47 +50,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _selectStation(int index) async {
     if (this._selectedIndex != index) {
-      _stop();
       setState(() {
         this._radioList[_selectedIndex].selected = false;
         this._selectedIndex = index;
         this._radioList[this._selectedIndex].selected = true;
       });
-      _play();
-    }
-  }
-
-  void _play() {
-    if (_playerState != PlayerState.PLAYING) {
-      try {
-        FlutterRadio.play(url: this._radioList[_selectedIndex].url);
-        setState(() => this._playerState = PlayerState.PLAYING);
-      } catch (e) {
-        print(e);
-      }
-    }
-  }
-
-  void _pause() {
-    if (_playerState == PlayerState.PLAYING) {
-      try {
-        FlutterRadio.pause(url: this._radioList[_selectedIndex].url);
-        setState(() => this._playerState = PlayerState.PAUSED);
-      } catch (e) {
-        print(e);
-      }
-    }
-  }
-
-  void _stop() {
-    if (_playerState == PlayerState.PAUSED ||
-        _playerState == PlayerState.PLAYING) {
-      try {
-        FlutterRadio.stop();
-        setState(() => this._playerState = PlayerState.STOPPED);
-      } catch (e) {
-        print(e);
-      }
     }
   }
 
@@ -134,12 +95,6 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       }).toList(),
     );
-  }
-
-  @override
-  void dispose() {
-    FlutterRadio.stop();
-    super.dispose();
   }
 
   @override
@@ -187,10 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
               title: _radioList[_selectedIndex].name,
               freq: _radioList[_selectedIndex].frequency,
               url: _radioList[_selectedIndex].url,
-              play: this._play,
-              pause: this._pause,
-              stop: this._stop,
-              state: this._playerState,
+              index: _selectedIndex,
             ),
             BottomNavigation(),
           ],

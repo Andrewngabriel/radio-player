@@ -51,9 +51,9 @@ class StationList {
     var client = http.Client();
     try {
       for (int i = 0; i < list.length; i++) {
-        String URL = "${streemaBaseURL}${list[i]["streema-data-url"]}";
+        String url = "$streemaBaseURL${list[i]["streema-data-url"]}";
         String title = list[i]["title"];
-        String response = await client.read(URL);
+        String response = await client.read(url);
         Document parsedRes = parse(response);
         var streamURL = parsedRes.querySelector("audio");
         if (streamURL != null &&
@@ -133,11 +133,6 @@ class StationList {
       "Radio Masr El-Gdida",
       0.0,
       "http://streaming.radio.co:80/scc13a6b96/listen",
-    ),
-    RadioStation(
-      "راديو مصر",
-      88.7,
-      "http://live.radiomasr.net:8060/RADIOMASR",
     ),
     RadioStation(
       "راديو مصر",
