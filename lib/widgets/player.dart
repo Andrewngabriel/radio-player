@@ -4,9 +4,11 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_media_notification/flutter_media_notification.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/radio_station.dart';
+import '../models/station_list.dart';
 import '../playerState.dart';
+import '../utils/station_favorites.dart';
 
 class Player extends StatefulWidget {
   final String title;
@@ -27,8 +29,8 @@ class Player extends StatefulWidget {
 }
 
 class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
-  SharedPreferences prefs;
-  List<String> favoriteIndexes = List<String>();
+  StationFavorites _favorites = StationFavorites();
+  bool _isFavoriteStation;
 
   AnimationController _playBtnController;
   AudioPlayer _audioPlayer;
@@ -49,6 +51,7 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    this._isFavoriteStation = false;
     this._initAudioPlayer();
     this._playBtnController =
         AnimationController(vsync: this, duration: Duration(milliseconds: 300));
@@ -69,8 +72,8 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(Player oldWidget) {
     super.didUpdateWidget(oldWidget);
-    this._stop();
-    this._play();
+    this._isFavoriteStation = this._isFavorite();
+    this._setURL();
   }
 
   void _setNotification() {
@@ -90,6 +93,27 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
       this._play();
       await this._playBtnController.reverse().orCancel;
     }
+  }
+
+  void _setURL() async {
+    await _audioPlayer.setUrl(StationList.list[widget.index].url);
+  }
+
+  Future _favorite() async {
+    List<RadioStation> stations = StationList.list;
+    bool isInFavorites = this._favorites.isFavorite(stations[widget.index]);
+    if (isInFavorites) {
+      await this._favorites.removeFavorite(stations[widget.index]);
+    } else {
+      await this._favorites.addFavorite(stations[widget.index]);
+    }
+    this._isFavorite();
+  }
+
+  bool _isFavorite() {
+    bool status = _favorites.isFavorite(StationList.list[widget.index]);
+    setState(() => this._isFavoriteStation = status);
+    return status;
   }
 
   @override
@@ -120,12 +144,12 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
           ),
           IconButton(
             icon: Icon(
-              Icons.star_border,
+              (_isFavoriteStation) ? Icons.star : Icons.star_border,
               color: Colors.orange,
               size: 30,
             ),
             padding: EdgeInsets.only(top: 5, right: 20.0),
-            onPressed: () {},
+            onPressed: this._favorite,
           ),
           IconButton(
             icon: AnimatedIcon(
