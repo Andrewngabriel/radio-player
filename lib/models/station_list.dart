@@ -3,6 +3,7 @@ import 'package:html/parser.dart' show parse;
 import 'package:http/http.dart' as http;
 
 import './radio_station.dart';
+import '../utils/favorites_storage.dart';
 
 class StationList {
   final List<String> streemaEgyptURLs = [
@@ -16,6 +17,19 @@ class StationList {
   final String streemaBaseURL = "http://streema.com";
 
   List<RadioStation> radioList = [];
+  List<RadioStation> favoriteList = [];
+
+  StationList() {
+    initFavoritesList();
+  }
+
+  Future<List> initFavoritesList() async {
+    favoriteList = await FavoritesStorage().readFavorites() ?? [];
+  }
+
+  static Future<List<RadioStation>> getRefreshedStations() async {
+    return await FavoritesStorage().readFavorites() ?? [];
+  }
 
   Future<List> parseStreemaStationsInfo() async {
     var client = http.Client();
