@@ -21,34 +21,33 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   void initState() {
     super.initState();
-    this.favoriteStationList = favoriteStations.favoriteList;
+    StationList.getRefreshedStations().then((stations) {
+      this.favoriteStationList = stations;
+    });
   }
 
   @override
   void didUpdateWidget(FavoritesScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    print("favorites ~ didUpdateWidget()");
     updateStations();
+    super.didUpdateWidget(oldWidget);
   }
 
-  void updateStations() async {
-    List<RadioStation> updatedStations =
-        await StationList.getRefreshedStations();
-    setState(() => this.favoriteStationList = updatedStations);
+  void updateStations() {
+    StationList.getRefreshedStations().then((stations) {
+      setState(() => this.favoriteStationList = stations);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: Config.backgroundGradient(),
-      child: GridView.count(
-        crossAxisCount: 3,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
+      child: ListView(
         padding: EdgeInsets.all(10.0),
         children: favoriteStationList.map((station) {
           int index = favoriteStationList.indexOf(station);
           return RadioCard(
+            station.id,
             station.name,
             station.frequency,
             station.url,
