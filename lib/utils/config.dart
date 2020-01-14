@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../screens/favorites.dart';
-
 class Config {
   static const String title = "Egypt Radio";
-
-  static Map<String, WidgetBuilder> navigationRoutes(BuildContext context) {
-    return {
-      '/favorites': (context) => FavoritesScreen(),
-    };
-  }
 
   static ThemeData themeOptions(BuildContext context) {
     return ThemeData(
