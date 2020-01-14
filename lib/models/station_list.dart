@@ -20,15 +20,13 @@ class StationList {
   List<RadioStation> favoriteList = [];
 
   StationList() {
+    radioList = list;
     initFavoritesList();
   }
 
-  Future<List> initFavoritesList() async {
-    favoriteList = await FavoritesStorage().readFavorites() ?? [];
-  }
-
-  static Future<List<RadioStation>> getRefreshedStations() async {
-    return await FavoritesStorage().readFavorites() ?? [];
+  RadioStation findStation(String id) {
+    int stationIndex = radioList.indexWhere((station) => station.id == id);
+    return this.radioList[stationIndex];
   }
 
   Future<List> parseStreemaStationsInfo() async {
@@ -83,8 +81,16 @@ class StationList {
     return true;
   }
 
+  void initFavoritesList() async {
+    favoriteList = await FavoritesStorage().readFavorites();
+  }
+
   void addNewStation(String title, String url) {
     radioList.add(RadioStation(title, 0.0, url));
+  }
+
+  static Future<List<RadioStation>> getRefreshedStations() async {
+    return await FavoritesStorage().readFavorites();
   }
 
   static List<RadioStation> list = [
