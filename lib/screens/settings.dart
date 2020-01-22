@@ -7,13 +7,12 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: Config.backgroundGradient(),
-      child: GridView.count(
-        crossAxisCount: 1,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
+      child: ListView(
         padding: EdgeInsets.all(10.0),
         children: <Widget>[
-          Text("Hello!"),
+          Card(
+            child: Text("Privacy Policy"),
+          ),
         ],
       ),
     );
