@@ -3,9 +3,9 @@ import 'package:radio_player/utils/favorites_storage.dart';
 
 class StationFavorites {
   FavoritesStorage storage = FavoritesStorage();
-  List favorites = [];
+  List<RadioStation> favorites = [];
 
-  Future<List> readAllFavorites() async {
+  Future<List<RadioStation>> readAllFavorites() async {
     this.favorites = await storage.readFavorites();
     return this.favorites;
   }
