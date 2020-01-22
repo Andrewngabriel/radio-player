@@ -27,8 +27,6 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
   static const String replayButtonId = 'replayButtonId';
   static const String newReleasesButtonId = 'newReleasesButtonId';
 
-  AnimationController _playBtnController;
-
   Audio _remoteAudio;
   bool _remoteAudioPlaying = false;
   bool _remoteAudioLoading = false;
@@ -62,8 +60,8 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
         print("inside onError()");
         print(message);
         _remoteErrorMessage = message;
-//        _remoteAudio.dispose();
-//        _remoteAudio = null;
+        _remoteAudio.dispose();
+        _remoteAudio = null;
         _remoteAudioPlaying = false;
         _remoteAudioLoading = false;
       }),
