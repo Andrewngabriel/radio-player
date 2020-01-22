@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
-import './screens/favorites.dart';
 import './screens/settings.dart';
 import './screens/stations.dart';
 import './widgets/bottom_navigation.dart';
@@ -18,7 +17,6 @@ class MyApp extends StatelessWidget {
       title: Config.title,
       theme: Config.themeOptions(context),
       home: MyHomePage(),
-      routes: Config.navigationRoutes(context),
     );
   }
 }
@@ -29,11 +27,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  // Keeps track of the array index of station array
   int _selectedStationIndex = 0;
   int _selectedPageIndex = 0;
+  RadioStation _chosenStation;
+  String _screenTitle = "Stations";
+  StationList stationList = StationList();
   StationList _externalStationsList = StationList();
-  List<RadioStation> _radioList = StationList.list;
-  List _screens;
+
+  List<RadioStation> _radioList = List<RadioStation>();
+  List<RadioStation> _favoritesList = List<RadioStation>();
+  List<dynamic> _screens = List<dynamic>();
 
   _getMoreStations() {
     _externalStationsList.parseStreemaStationsInfo().then((stationsList) {
@@ -49,37 +53,35 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
 //    _getMoreStations();
+    this._radioList = stationList.radioList;
+    this._radioList[0].selected = true;
+    this._chosenStation = this._radioList[0];
     _screens = [
-      StationsScreen(stations: _radioList, selectStation: this._selectStation),
-      FavoritesScreen(selectStation: _selectStation),
+      StationsScreen(
+        stations: this._radioList,
+        selectStation: this._selectStation,
+      ),
       SettingsScreen(),
     ];
   }
 
-  @override
-  void didUpdateWidget(MyHomePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
-
-  void _selectStation(int index) async {
-    print("Homepage ~ _selectStation()");
+  void _selectStation(String id) async {
+    RadioStation station = this.stationList.findStation(id);
+    int index = this._radioList.indexOf(station);
     if (this._selectedStationIndex != index) {
       setState(() {
         this._radioList[_selectedStationIndex].selected = false;
         this._selectedStationIndex = index;
         this._radioList[this._selectedStationIndex].selected = true;
-        refreshHome();
+        this._chosenStation = station;
       });
+      this.refreshScreen(_selectedPageIndex);
     }
-  }
-
-  void refreshHome() {
-    _screens[0] = StationsScreen(
-        stations: _radioList, selectStation: this._selectStation);
   }
 
   void changeScreen(BuildContext ctx, int index) {
     setState(() => _selectedPageIndex = index);
+    refreshScreen(_selectedPageIndex);
   }
 
   @override
@@ -87,7 +89,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0.0,
-        title: Text("Stations", style: TextStyle(color: Colors.white)),
+        title: Text(this._screenTitle, style: TextStyle(color: Colors.white)),
         actions: <Widget>[
           IconButton(
             icon: Icon(
@@ -96,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
               size: 35,
             ),
             padding: EdgeInsets.only(right: 5.0),
-            onPressed: () {},
+            onPressed: null,
           ),
         ],
       ),
@@ -108,9 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             Player(
-              title: _radioList[_selectedStationIndex].name,
-              freq: _radioList[_selectedStationIndex].frequency,
-              url: _radioList[_selectedStationIndex].url,
+              station: _chosenStation,
               index: _selectedStationIndex,
             ),
             BottomNavigation(
@@ -121,5 +121,44 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+
+  void refreshScreen(int index) {
+    /**
+     * 0 ~ StationsScreen()
+     * 2 ~ SettingsScreen()
+     */
+    switch (index) {
+      case 0:
+        {
+          setState(() {
+            this._screenTitle = "Stations";
+            _screens[0] = StationsScreen(
+              stations: _radioList,
+              selectStation: this._selectStation,
+            );
+          });
+        }
+        break;
+      case 1:
+        {
+          setState(() {
+            this._screenTitle = "Settings";
+            _screens[1] = SettingsScreen();
+          });
+        }
+        break;
+      default:
+        {
+          setState(() {
+            _screens = [
+              StationsScreen(
+                  stations: _radioList, selectStation: this._selectStation),
+              SettingsScreen(),
+            ];
+          });
+        }
+        break;
+    }
   }
 }
