@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class RadioCard extends StatelessWidget {
+  final String id;
   final String title;
   final double freq;
   final String url;
@@ -9,6 +10,7 @@ class RadioCard extends StatelessWidget {
   final Function _selectStation;
 
   RadioCard(
+    this.id,
     this.title,
     this.freq,
     this.url,
@@ -20,9 +22,7 @@ class RadioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OutlineButton(
-      onPressed: () {
-        this._selectStation(this.index);
-      },
+      onPressed: () => this._selectStation(this.id),
       padding: EdgeInsets.all(0),
       borderSide: (this.selected)
           ? BorderSide(color: Colors.blue, width: 2.0)
