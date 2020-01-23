@@ -1,11 +1,6 @@
-import 'dart:async';
-import 'dart:math';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
-import 'package:audiofileplayer/audio_system.dart';
-import 'package:audiofileplayer/audiofileplayer.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../models/radio_station.dart';
 
@@ -23,111 +18,64 @@ class Player extends StatefulWidget {
   _PlayerState createState() => _PlayerState();
 }
 
-class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
-  static const String replayButtonId = 'replayButtonId';
-  static const String newReleasesButtonId = 'newReleasesButtonId';
+class _PlayerState extends State<Player> {
+  final audioPlayer = AudioPlayer();
+  AudioPlaybackState playbackState;
 
-  Audio _remoteAudio;
-  bool _remoteAudioPlaying = false;
-  bool _remoteAudioLoading = false;
-  String _remoteErrorMessage;
+  Icon playPauseBtn;
 
   @override
   void initState() {
     print('initState() called!');
     super.initState();
-    AudioSystem.instance.addMediaEventListener(_mediaEventListener);
-    this._loadRemoteAudio();
+    connectBackgroundTask();
+    this.audioPlayer.setUrl(widget.station.url);
+    playPauseBtn = Icon(Icons.play_circle_outline);
+  }
+
+  @override
+  void didUpdateWidget(Player oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    this.setUrl();
   }
 
   @override
   void dispose() {
     print('dispose() called!');
-    AudioSystem.instance.removeMediaEventListener(_mediaEventListener);
-    if (_remoteAudioPlaying) _remoteAudio.pause();
-    if (_remoteAudio != null) _remoteAudio.dispose();
+    disposeAudioPlayer();
+    AudioService.disconnect();
     super.dispose();
   }
 
-  void _loadRemoteAudio() {
-    _remoteErrorMessage = null;
-    _remoteAudioLoading = true;
-    _remoteAudio = Audio.loadFromRemoteUrl(
-      widget.station.url,
-      playInBackground: true,
-      onDuration: (duration) => setState(() => _remoteAudioLoading = false),
-      onError: (String message) => setState(() {
-        print("inside onError()");
-        print(message);
-        _remoteErrorMessage = message;
-        _remoteAudio.dispose();
-        _remoteAudio = null;
-        _remoteAudioPlaying = false;
-        _remoteAudioLoading = false;
-      }),
-    );
+  void connectBackgroundTask() async {
+    await AudioService.connect();
   }
 
-  Future<void> _resumeRemoteAudio() async {
-    _remoteAudio.resume();
-    setState(() => _remoteAudioPlaying = true);
+  void setUrl() async => await this.audioPlayer.setUrl(widget.station.url);
 
-    final Uint8List imageBytes = await generateImageBytes();
-    AudioSystem.instance.setMetadata(AudioMetadata(
-      title: "Great title",
-      artist: "Great artist",
-      album: "Great album",
-      genre: "Great genre",
-      durationSeconds: 0,
-      artBytes: imageBytes,
-    ));
+  void disposeAudioPlayer() async => await this.audioPlayer.dispose();
 
-    AudioSystem.instance.setAndroidNotificationButtons(<dynamic>[
-      AndroidMediaButtonType.pause,
-      AndroidMediaButtonType.stop,
-      const AndroidCustomMediaButton(
-          'replay', replayButtonId, 'ic_replay_black_36dp')
-    ], androidCompactIndices: <int>[
-      0
-    ]);
-
-    AudioSystem.instance.setSupportedMediaActions(<MediaActionType>{
-      MediaActionType.playPause,
-      MediaActionType.pause,
-    }, skipIntervalSeconds: 30);
-  }
-
-  void _pauseRemoteAudio() {
-    _remoteAudio.pause();
-    setState(() => _remoteAudioPlaying = false);
-
-    AudioSystem.instance.setAndroidNotificationButtons(<dynamic>[
-      AndroidMediaButtonType.play,
-      AndroidMediaButtonType.stop,
-      const AndroidCustomMediaButton(
-          'new releases', newReleasesButtonId, 'ic_new_releases_black_36dp'),
-    ], androidCompactIndices: <int>[
-      0
-    ]);
-
-    AudioSystem.instance.setSupportedMediaActions(<MediaActionType>{
-      MediaActionType.playPause,
-      MediaActionType.play,
-    });
-  }
-
-  void _stopRemoteAudio() {
-    _remoteAudio.pause();
-    setState(() => _remoteAudioPlaying = false);
-    AudioSystem.instance.stopBackgroundDisplay();
-  }
-
-  void _playPause() {
-    if (_remoteAudioPlaying) {
-      this._pauseRemoteAudio();
+  void _playPause() async {
+    AudioPlaybackState state = this.audioPlayer.playbackState;
+    if (state == AudioPlaybackState.playing) {
+      await this.audioPlayer.pause();
+      setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
     } else {
-      _remoteAudio.resume();
+      await this.audioPlayer.play();
+      AudioService.start(
+        backgroundTaskEntrypoint: myBackgroundTaskEntrypoint,
+        notificationColor: 0xFF2196f3,
+        androidNotificationChannelName: 'Music Player',
+        androidNotificationIcon: "mipmap/ic_launcher",
+      );
+      setState(() => playPauseBtn = Icon(Icons.pause_circle_outline));
     }
+  }
+
+  void _printDebugInfo() async {
+//    audioPlayer.playbackStateStream.listen((state) {}, onDone: );
+    print("playbackState: ${this.audioPlayer.playbackState}");
+    print(await AudioService.running);
   }
 
   @override
@@ -154,7 +102,7 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.play_circle_outline),
+            icon: this.playPauseBtn,
             color: Colors.white,
             iconSize: 50,
             onPressed: this._playPause,
@@ -164,75 +112,40 @@ class _PlayerState extends State<Player> with SingleTickerProviderStateMixin {
             icon: Icon(Icons.settings),
             color: Colors.white,
             iconSize: 50,
-            onPressed: () {
-              print(_remoteAudio);
-              print("_remoteAudioPlaying: $_remoteAudioPlaying");
-              print("_remoteAudioLoading: $_remoteAudioLoading");
-            },
+            onPressed: this._printDebugInfo,
             padding: EdgeInsets.only(right: 0.0),
           ),
         ],
       ),
     );
   }
+}
 
-  void _mediaEventListener(MediaEvent mediaEvent) {
-    print('App received media event of type: ${mediaEvent.type}');
-    final MediaActionType type = mediaEvent.type;
-    if (type == MediaActionType.play) {
-      _resumeRemoteAudio();
-    } else if (type == MediaActionType.pause) {
-      _pauseRemoteAudio();
-    } else if (type == MediaActionType.playPause) {
-      _remoteAudioPlaying ? _pauseRemoteAudio() : _resumeRemoteAudio();
-    } else if (type == MediaActionType.stop) {
-      _stopRemoteAudio();
-    } else if (type == MediaActionType.custom) {
-      if (mediaEvent.customEventId == replayButtonId) {
-        _remoteAudio.play();
-        AudioSystem.instance.setPlaybackState(true, 0.0);
-      } else if (mediaEvent.customEventId == newReleasesButtonId) {
-        print('New-releases button is not implemented in this exampe app.');
-      }
-    }
+void myBackgroundTaskEntrypoint() {
+  AudioServiceBackground.run(() => MyBackgroundTask());
+}
+
+class MyBackgroundTask extends BackgroundAudioTask {
+  @override
+  Future<void> onStart() async {
+    // Your custom dart code to start audio playback.
+    // NOTE: The background audio task will shut down
+    // as soon as this async function completes.
   }
-
-  static Future<Uint8List> generateImageBytes() async {
-    // Random color generation methods: pick contrasting hues.
-    final Random random = Random();
-    final double bgHue = random.nextDouble() * 360;
-    final double fgHue = (bgHue + 180.0) % 360;
-    final HSLColor bgHslColor =
-        HSLColor.fromAHSL(1.0, bgHue, random.nextDouble() * .5 + .5, .5);
-    final HSLColor fgHslColor =
-        HSLColor.fromAHSL(1.0, fgHue, random.nextDouble() * .5 + .5, .5);
-
-    final Size size = const Size(200.0, 200.0);
-    final Offset center = const Offset(100.0, 100.0);
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Rect rect = Offset.zero & size;
-    final Canvas canvas = Canvas(recorder, rect);
-    final Paint bgPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = bgHslColor.toColor();
-    final Paint fgPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = fgHslColor.toColor()
-      ..strokeWidth = 8;
-    // Draw background color.
-    canvas.drawRect(rect, bgPaint);
-    // Draw 5 inset squares around the center.
-    for (int i = 0; i < 5; i++) {
-      canvas.drawRect(
-          Rect.fromCenter(center: center, width: i * 40.0, height: i * 40.0),
-          fgPaint);
-    }
-    // Render to image, then compress to PNG ByteData, then return as Uint8List.
-    final ui.Image image = await recorder
-        .endRecording()
-        .toImage(size.width.toInt(), size.height.toInt());
-    final ByteData encodedImageData =
-        await image.toByteData(format: ui.ImageByteFormat.png);
-    return encodedImageData.buffer.asUint8List();
+  @override
+  void onStop() {
+    // Your custom dart code to stop audio playback.
+  }
+  @override
+  void onPlay() {
+    // Your custom dart code to resume audio playback.
+  }
+  @override
+  void onPause() {
+    // Your custom dart code to pause audio playback.
+  }
+  @override
+  void onClick(MediaButton button) {
+    // Your custom dart code to handle a media button click.
   }
 }
