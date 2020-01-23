@@ -22,13 +22,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.4.0"
-  audiofileplayer:
+  audio_service:
     dependency: "direct main"
     description:
-      name: audiofileplayer
+      name: audio_service
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.1.1"
+    version: "0.5.7"
   boolean_selector:
     dependency: transitive
     description:
@@ -83,6 +83,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_isolate:
+    dependency: transitive
+    description:
+      name: flutter_isolate
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.0+11"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -123,13 +130,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.1.4"
-  logging:
-    dependency: transitive
+  just_audio:
+    dependency: "direct main"
     description:
-      name: logging
+      name: just_audio
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.11.4"
+    version: "0.0.6"
   matcher:
     dependency: transitive
     description:
@@ -186,6 +193,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.5"
+  rxdart:
+    dependency: transitive
+    description:
+      name: rxdart
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.23.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -262,5 +276,5 @@ packages:
     source: hosted
     version: "3.5.0"
 sdks:
-  dart: ">=2.4.0 <3.0.0"
+  dart: ">=2.6.0 <3.0.0"
   flutter: ">=1.10.0 <2.0.0"
