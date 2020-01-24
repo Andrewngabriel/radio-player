@@ -27,9 +27,10 @@ class _PlayerState extends State<Player> {
 
   @override
   void initState() {
-    print('initState() called!');
     super.initState();
     connectBackgroundTask();
+    // Audio may already be playing in the background, so set the icon
+    // accordingly.
     PlaybackState state = AudioService.playbackState;
     if (state?.basicState == BasicPlaybackState.playing) {
       playPauseBtn = Icon(Icons.pause_circle_outline);
@@ -45,13 +46,16 @@ class _PlayerState extends State<Player> {
 
   @override
   void dispose() {
-    print('dispose() called!');
     AudioService.disconnect();
     super.dispose();
   }
 
+  // Call this to send information about the current station to the
+  // audio service.
   Future<void> updatePlayerMetadata() async {
     if (widget.station.url == _oldUrl) {
+      // Don't update if the station hasn't changed since the last time we
+      // sent information.
       return;
     }
 
@@ -65,7 +69,7 @@ class _PlayerState extends State<Player> {
     // ever one item in the queue at a time.
     await AudioService.addQueueItem(MediaItem(
       id: widget.station.url,
-      album: 'Radio',
+      album: '${widget.station.frequency} FM',
       title: widget.station.name,
     ));
     _oldUrl = widget.station.url;
@@ -76,15 +80,15 @@ class _PlayerState extends State<Player> {
 
   void connectBackgroundTask() async {
     await AudioService.connect();
+    // If the background task hasn't been started yet, then go ahead and start it.
     if (!await AudioService.running) {
-      bool success = await AudioService.start(
+      await AudioService.start(
         backgroundTaskEntrypoint: backgroundTaskEntryPoint,
         notificationColor: 0xFF2196f3,
         androidNotificationChannelName: 'Music Player',
         androidNotificationIcon: "mipmap/ic_launcher",
         enableQueue: true,
       );
-      print('Launching background task: Successful? $success');
     }
   }
 
@@ -94,6 +98,8 @@ class _PlayerState extends State<Player> {
       await AudioService.pause();
       setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
     } else {
+      // Make sure that the player has the metadata for the current station
+      // before playing.
       await updatePlayerMetadata();
       await AudioService.play();
       setState(() => playPauseBtn = Icon(Icons.pause_circle_outline));
@@ -108,6 +114,8 @@ class _PlayerState extends State<Player> {
 
   @override
   Widget build(BuildContext context) {
+    // The widget gets rebuilt when a new station is selected. Make sure that
+    // the background service has the metadata for the current station.
     updatePlayerMetadata();
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
@@ -182,7 +190,6 @@ class MyBackgroundTask extends BackgroundAudioTask {
 
   @override
   Future<void> onStart() async {
-    print('we starting');
     AudioServiceBackground.setQueue(_queue);
     await _endGuard.future;
     await _audioPlayer.dispose();
@@ -210,6 +217,8 @@ class MyBackgroundTask extends BackgroundAudioTask {
       systemActions: [],
       basicState: BasicPlaybackState.playing,
     );
+    // Doing the actual loading here in the onPlay() method ensures that the
+    // loading of the media will complete before play() is called.
     if (_reloadMedia) {
       _reloadMedia = false;
       AudioServiceBackground.setMediaItem(_queue[0]);
