@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -19,67 +21,89 @@ class Player extends StatefulWidget {
 }
 
 class _PlayerState extends State<Player> {
-  final audioPlayer = AudioPlayer();
   AudioPlaybackState playbackState;
-
   Icon playPauseBtn;
+  String _oldUrl = '';
 
   @override
   void initState() {
     print('initState() called!');
     super.initState();
     connectBackgroundTask();
-    this.audioPlayer.setUrl(widget.station.url);
     playPauseBtn = Icon(Icons.play_circle_outline);
   }
 
   @override
   void didUpdateWidget(Player oldWidget) {
     super.didUpdateWidget(oldWidget);
-    this.setUrl();
   }
 
   @override
   void dispose() {
     print('dispose() called!');
-    disposeAudioPlayer();
     AudioService.disconnect();
     super.dispose();
   }
 
-  void connectBackgroundTask() async {
-    await AudioService.connect();
+  Future<void> updatePlayerMetadata() async {
+    if (widget.station.url == _oldUrl) {
+      return;
+    }
+
+    PlaybackState state = AudioService.playbackState;
+    bool wasPlaying = state?.basicState == BasicPlaybackState.playing;
+    if (wasPlaying) {
+      await AudioService.pause();
+    }
+    // Our custom addQueueItem() handler is really a setQueueItem() function,
+    // it clears the 'queue' before adding the new item, so there is only 
+    // ever one item in the queue at a time.
+    await AudioService.addQueueItem(MediaItem(
+      id: widget.station.url,
+      album: 'Radio',
+      title: widget.station.name,
+    ));
+    _oldUrl = widget.station.url;
+    if (wasPlaying) {
+      await AudioService.play();
+    }
   }
 
-  void setUrl() async => await this.audioPlayer.setUrl(widget.station.url);
-
-  void disposeAudioPlayer() async => await this.audioPlayer.dispose();
-
-  void _playPause() async {
-    AudioPlaybackState state = this.audioPlayer.playbackState;
-    if (state == AudioPlaybackState.playing) {
-      await this.audioPlayer.pause();
-      setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
-    } else {
-      await this.audioPlayer.play();
-      AudioService.start(
-        backgroundTaskEntrypoint: myBackgroundTaskEntrypoint,
+  void connectBackgroundTask() async {
+    await AudioService.connect();
+    if (!await AudioService.running) {
+      bool success = await AudioService.start(
+        backgroundTaskEntrypoint: backgroundTaskEntryPoint,
         notificationColor: 0xFF2196f3,
         androidNotificationChannelName: 'Music Player',
         androidNotificationIcon: "mipmap/ic_launcher",
+        enableQueue: true,
       );
+      print('Launching background task: Successful? $success');
+    }
+  }
+
+  void _playPause() async {
+    PlaybackState state = AudioService.playbackState;
+    if (state?.basicState == BasicPlaybackState.playing) {
+      await AudioService.pause();
+      setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
+    } else {
+      await updatePlayerMetadata();
+      await AudioService.play();
       setState(() => playPauseBtn = Icon(Icons.pause_circle_outline));
     }
   }
 
   void _printDebugInfo() async {
 //    audioPlayer.playbackStateStream.listen((state) {}, onDone: );
-    print("playbackState: ${this.audioPlayer.playbackState}");
+    // print("playbackState: ${this.audioPlayer.playbackState}");
     print(await AudioService.running);
   }
 
   @override
   Widget build(BuildContext context) {
+    updatePlayerMetadata();
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       decoration: BoxDecoration(
@@ -121,31 +145,87 @@ class _PlayerState extends State<Player> {
   }
 }
 
-void myBackgroundTaskEntrypoint() {
+void backgroundTaskEntryPoint() {
   AudioServiceBackground.run(() => MyBackgroundTask());
 }
 
+MediaControl playControl = MediaControl(
+  androidIcon: 'drawable/ic_action_play_arrow',
+  label: 'Play',
+  action: MediaAction.play,
+);
+MediaControl pauseControl = MediaControl(
+  androidIcon: 'drawable/ic_action_pause',
+  label: 'Pause',
+  action: MediaAction.pause,
+);
+MediaControl stopControl = MediaControl(
+  androidIcon: 'drawable/ic_action_stop',
+  label: 'Stop',
+  action: MediaAction.stop,
+);
+
 class MyBackgroundTask extends BackgroundAudioTask {
+  final _audioPlayer = AudioPlayer();
+  List<MediaItem> _queue = [MediaItem(
+    id: '',
+    title: 'None',
+    album: 'Radio'
+  )];
+  Completer _endGuard = new Completer<void>();
+  bool _reloadMedia = false;
+
   @override
   Future<void> onStart() async {
-    // Your custom dart code to start audio playback.
-    // NOTE: The background audio task will shut down
-    // as soon as this async function completes.
+    print('we starting');
+    AudioServiceBackground.setQueue(_queue);
+    await _endGuard.future;
+    await _audioPlayer.dispose();
   }
+
   @override
-  void onStop() {
-    // Your custom dart code to stop audio playback.
+  void onStop() async {
+    await _audioPlayer.stop();
+    _endGuard.complete();
   }
+
   @override
-  void onPlay() {
-    // Your custom dart code to resume audio playback.
+  void onAddQueueItem(MediaItem item) {
+    if (item.id != _queue[0].id) {
+      _reloadMedia = true;
+    }
+    _queue[0] = item;
+    AudioServiceBackground.setQueue(_queue);
   }
+
   @override
-  void onPause() {
-    // Your custom dart code to pause audio playback.
+  void onPlay() async {
+    AudioServiceBackground.setState(
+      controls: [pauseControl, stopControl],
+      systemActions: [],
+      basicState: BasicPlaybackState.playing,
+    );
+    if (_reloadMedia) {
+      _reloadMedia = false;
+      AudioServiceBackground.setMediaItem(_queue[0]);
+      await _audioPlayer.setUrl(_queue[0].id);
+    }
+    await _audioPlayer.play();
   }
+
+  @override
+  void onPause() async {
+    AudioServiceBackground.setState(
+      controls: [playControl, stopControl],
+      systemActions: [],
+      basicState: BasicPlaybackState.paused,
+    );
+    await _audioPlayer.pause();
+  }
+
   @override
   void onClick(MediaButton button) {
     // Your custom dart code to handle a media button click.
   }
 }
+
