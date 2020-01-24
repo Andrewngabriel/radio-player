@@ -150,17 +150,17 @@ void backgroundTaskEntryPoint() {
 }
 
 MediaControl playControl = MediaControl(
-  androidIcon: 'drawable/ic_action_play_arrow',
+  androidIcon: 'drawable/ic_play_arrow',
   label: 'Play',
   action: MediaAction.play,
 );
 MediaControl pauseControl = MediaControl(
-  androidIcon: 'drawable/ic_action_pause',
+  androidIcon: 'drawable/ic_pause',
   label: 'Pause',
   action: MediaAction.pause,
 );
 MediaControl stopControl = MediaControl(
-  androidIcon: 'drawable/ic_action_stop',
+  androidIcon: 'drawable/ic_stop',
   label: 'Stop',
   action: MediaAction.stop,
 );
@@ -201,7 +201,7 @@ class MyBackgroundTask extends BackgroundAudioTask {
   @override
   void onPlay() async {
     AudioServiceBackground.setState(
-      controls: [pauseControl, stopControl],
+      controls: [pauseControl],
       systemActions: [],
       basicState: BasicPlaybackState.playing,
     );
@@ -216,7 +216,7 @@ class MyBackgroundTask extends BackgroundAudioTask {
   @override
   void onPause() async {
     AudioServiceBackground.setState(
-      controls: [playControl, stopControl],
+      controls: [playControl],
       systemActions: [],
       basicState: BasicPlaybackState.paused,
     );
