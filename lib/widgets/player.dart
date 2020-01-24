@@ -30,7 +30,12 @@ class _PlayerState extends State<Player> {
     print('initState() called!');
     super.initState();
     connectBackgroundTask();
-    playPauseBtn = Icon(Icons.play_circle_outline);
+    PlaybackState state = AudioService.playbackState;
+    if (state?.basicState == BasicPlaybackState.playing) {
+      playPauseBtn = Icon(Icons.pause_circle_outline);
+    } else {
+      playPauseBtn = Icon(Icons.play_circle_outline);
+    }
   }
 
   @override
