@@ -34,6 +34,8 @@ class _PlayerState extends State<Player> {
     PlaybackState state = AudioService.playbackState;
     if (state?.basicState == BasicPlaybackState.playing) {
       playPauseBtn = Icon(Icons.pause_circle_outline);
+    } else if (state?.basicState == BasicPlaybackState.buffering) {
+      playPauseBtn = Icon(Icons.autorenew);
     } else {
       playPauseBtn = Icon(Icons.play_circle_outline);
     }
@@ -89,6 +91,24 @@ class _PlayerState extends State<Player> {
         androidNotificationIcon: "mipmap/ic_launcher",
         enableQueue: true,
       );
+    }
+    // Setup listeners so that the state changes when the audio player is
+    // controlled outside the GUI.
+    listenForAudioPlayerStateChanges();
+  }
+
+  void listenForAudioPlayerStateChanges() async {
+    await for (PlaybackState state in AudioService.playbackStateStream) {
+      if (state == null) continue;
+      if (state.basicState == BasicPlaybackState.playing) {
+        setState(() => playPauseBtn = Icon(Icons.pause_circle_outline));
+      } else if (state.basicState == BasicPlaybackState.paused) {
+        setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
+      } else if (state.basicState == BasicPlaybackState.buffering) {
+        setState(() => playPauseBtn = Icon(Icons.autorenew));
+      } else { // Default to play icon.
+        setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
+      }
     }
   }
 
@@ -222,9 +242,21 @@ class MyBackgroundTask extends BackgroundAudioTask {
     if (_reloadMedia) {
       _reloadMedia = false;
       AudioServiceBackground.setMediaItem(_queue[0]);
+      // Tell the main process that the audio is buffering.
+      AudioServiceBackground.setState(
+        controls: [pauseControl],
+        systemActions: [],
+        basicState: BasicPlaybackState.buffering
+      );
       await _audioPlayer.setUrl(_queue[0].id);
+      AudioServiceBackground.setState(
+        controls: [pauseControl],
+        systemActions: [],
+        basicState: BasicPlaybackState.playing
+      );
     }
-    await _audioPlayer.play();
+
+    _audioPlayer.play();
   }
 
   @override
