@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../models/radio_station.dart';
@@ -24,20 +25,30 @@ class _PlayerState extends State<Player> {
   AudioPlaybackState playbackState;
   Icon playPauseBtn;
   String _oldUrl = '';
+  bool _buffering = false;
 
   @override
   void initState() {
     super.initState();
     connectBackgroundTask();
-    // Audio may already be playing in the background, so set the icon
-    // accordingly.
     PlaybackState state = AudioService.playbackState;
-    if (state?.basicState == BasicPlaybackState.playing) {
+    displayPlaybackState(state?.basicState);
+  }
+
+  // Sets this widget state according to the current playback state.
+  // This includes things like setting the appropriate icon for the button.
+  void displayPlaybackState(BasicPlaybackState state) {
+    if (state == BasicPlaybackState.playing) {
       playPauseBtn = Icon(Icons.pause_circle_outline);
-    } else if (state?.basicState == BasicPlaybackState.buffering) {
-      playPauseBtn = Icon(Icons.autorenew);
+      _buffering = false;
+    } else if (state == BasicPlaybackState.paused) {
+      playPauseBtn = Icon(Icons.play_circle_outline);
+      _buffering = false;
+    } else if (state == BasicPlaybackState.buffering) {
+      _buffering = true;
     } else {
       playPauseBtn = Icon(Icons.play_circle_outline);
+      _buffering = false;
     }
   }
 
@@ -67,7 +78,7 @@ class _PlayerState extends State<Player> {
       await AudioService.pause();
     }
     // Our custom addQueueItem() handler is really a setQueueItem() function,
-    // it clears the 'queue' before adding the new item, so there is only 
+    // it clears the 'queue' before adding the new item, so there is only
     // ever one item in the queue at a time.
     await AudioService.addQueueItem(MediaItem(
       id: widget.station.url,
@@ -100,15 +111,7 @@ class _PlayerState extends State<Player> {
   void listenForAudioPlayerStateChanges() async {
     await for (PlaybackState state in AudioService.playbackStateStream) {
       if (state == null) continue;
-      if (state.basicState == BasicPlaybackState.playing) {
-        setState(() => playPauseBtn = Icon(Icons.pause_circle_outline));
-      } else if (state.basicState == BasicPlaybackState.paused) {
-        setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
-      } else if (state.basicState == BasicPlaybackState.buffering) {
-        setState(() => playPauseBtn = Icon(Icons.autorenew));
-      } else { // Default to play icon.
-        setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
-      }
+      setState(() => this.displayPlaybackState(state?.basicState));
     }
   }
 
@@ -158,13 +161,18 @@ class _PlayerState extends State<Player> {
               ),
             ),
           ),
-          IconButton(
-            icon: this.playPauseBtn,
-            color: Colors.white,
-            iconSize: 50,
-            onPressed: this._playPause,
-            padding: EdgeInsets.only(right: 0.0),
-          ),
+          _buffering
+              ? SpinKitChasingDots(
+                  color: Colors.white,
+                  size: 50.0,
+                )
+              : IconButton(
+                  icon: this.playPauseBtn,
+                  color: Colors.white,
+                  iconSize: 50,
+                  onPressed: this._playPause,
+                  padding: EdgeInsets.only(right: 0.0),
+                ),
           IconButton(
             icon: Icon(Icons.settings),
             color: Colors.white,
@@ -200,11 +208,7 @@ MediaControl stopControl = MediaControl(
 
 class MyBackgroundTask extends BackgroundAudioTask {
   final _audioPlayer = AudioPlayer();
-  List<MediaItem> _queue = [MediaItem(
-    id: '',
-    title: 'None',
-    album: 'Radio'
-  )];
+  List<MediaItem> _queue = [MediaItem(id: '', title: 'None', album: 'Radio')];
   Completer _endGuard = new Completer<void>();
   bool _reloadMedia = false;
 
@@ -244,16 +248,14 @@ class MyBackgroundTask extends BackgroundAudioTask {
       AudioServiceBackground.setMediaItem(_queue[0]);
       // Tell the main process that the audio is buffering.
       AudioServiceBackground.setState(
-        controls: [pauseControl],
-        systemActions: [],
-        basicState: BasicPlaybackState.buffering
-      );
+          controls: [pauseControl],
+          systemActions: [],
+          basicState: BasicPlaybackState.buffering);
       await _audioPlayer.setUrl(_queue[0].id);
       AudioServiceBackground.setState(
-        controls: [pauseControl],
-        systemActions: [],
-        basicState: BasicPlaybackState.playing
-      );
+          controls: [pauseControl],
+          systemActions: [],
+          basicState: BasicPlaybackState.playing);
     }
 
     _audioPlayer.play();
@@ -274,4 +276,3 @@ class MyBackgroundTask extends BackgroundAudioTask {
     // Your custom dart code to handle a media button click.
   }
 }
-
