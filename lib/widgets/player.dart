@@ -88,8 +88,6 @@ class _PlayerState extends State<Player> {
           album: '${station.frequency}',
         ));
       }
-      // Show the current station.
-      await AudioService.skipToQueueItem(widget.station.url);
     }
     // Setup listeners so that the state changes when the audio player is
     // controlled outside the GUI.
@@ -216,12 +214,12 @@ MediaControl stopControl = MediaControl(
   action: MediaAction.stop,
 );
 MediaControl previousControl = MediaControl(
-  androidIcon: 'drawable/ic_play_arrow',
+  androidIcon: 'drawable/ic_arrow_back',
   label: 'Previous Station',
   action: MediaAction.skipToPrevious,
 );
 MediaControl nextControl = MediaControl(
-  androidIcon: 'drawable/ic_play_arrow',
+  androidIcon: 'drawable/ic_arrow_forward',
   label: 'Next Station',
   action: MediaAction.skipToNext,
 );
@@ -250,6 +248,10 @@ class MyBackgroundTask extends BackgroundAudioTask {
   @override
   void onAddQueueItem(MediaItem item) {
     _queue.add(item);
+    // If this is the first item, display it in the notification.
+    if (_queue.length == 1) {
+      AudioServiceBackground.setMediaItem(item);
+    }
     AudioServiceBackground.setQueue(_queue);
   }
 
