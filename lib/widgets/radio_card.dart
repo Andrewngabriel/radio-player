@@ -1,65 +1,82 @@
 import 'package:flutter/material.dart';
+import 'package:radio_player/models/radio_station.dart';
+import 'package:radio_player/utils/favorites_storage.dart';
+import 'package:radio_player/utils/station_favorites.dart';
 
-class RadioCard extends StatelessWidget {
-  final String id;
-  final String title;
-  final double freq;
-  final String url;
+class RadioCard extends StatefulWidget {
+  final RadioStation station;
   final int index;
-  final bool selected;
   final Function _selectStation;
 
   RadioCard(
-    this.id,
-    this.title,
-    this.freq,
-    this.url,
+    this.station,
     this.index,
-    this.selected,
     this._selectStation,
   );
 
   @override
+  _RadioCardState createState() {
+    return _RadioCardState();
+  }
+}
+
+class _RadioCardState extends State<RadioCard> {
+  @override
   Widget build(BuildContext context) {
     return OutlineButton(
-      onPressed: () => this._selectStation(this.id),
-      padding: EdgeInsets.all(0),
-      borderSide: (this.selected)
-          ? BorderSide(color: Colors.blue, width: 2.0)
-          : BorderSide(color: Colors.black12),
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-//            Padding(
-//              padding: const EdgeInsets.only(bottom: 5.0),
-//              child: Image.network(
-//                "http://db.radioline.fr/pictures/radio_045910f6d2008eb2177fd81564ec9f71/logo200.jpg?size=200",
-//                height: 60,
-//              ),
-//            ),
-            Text(
-              this.title,
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
+        onPressed: () => widget._selectStation(widget.station.id),
+        padding: EdgeInsets.all(0),
+        borderSide: (widget.station.selected)
+            ? BorderSide(color: Colors.blue, width: 2.0)
+            : BorderSide(color: Colors.black12),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    widget.station.name,
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    widget.station.frequency.toString(),
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              this.freq.toString(),
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
+            Container(
+              padding: const EdgeInsets.all(0.0),
+              alignment: Alignment.bottomRight,
+              child: IconButton(
+                icon: Icon(
+                  StationFavorites().isFavorite(widget.station)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: Colors.white,
+                ),
+                onPressed: () => this.setState(() {
+                  if (StationFavorites().isFavorite(widget.station)) {
+                    StationFavorites().removeFavorite(widget.station);
+                  } else {
+                    StationFavorites().addFavorite(widget.station);
+                  }
+                }),
               ),
-            ),
+            )
           ],
-        ),
-      ),
-    );
+        ));
   }
 }

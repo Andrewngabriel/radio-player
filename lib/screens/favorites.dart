@@ -22,13 +22,9 @@ class FavoritesScreen extends StatelessWidget {
           children = favoriteStations.map((station) {
             int index = favoriteStations.indexOf(station);
             return RadioCard(
-              station.id,
-              station.name,
-              station.frequency,
-              station.url,
-              index,
-              station.selected,
-              this.selectStation,
+                station,
+                index,
+                selectStation,
             );
           }).toList();
         } else if (snapshot.hasError) {
