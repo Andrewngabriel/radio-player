@@ -9,11 +9,15 @@ import '../models/radio_station.dart';
 
 class Player extends StatefulWidget {
   final RadioStation station;
+  final List<RadioStation> stations;
+  final Function selectStation;
   final int index;
 
   Player({
     Key key,
     @required this.station,
+    @required this.stations,
+    @required this.selectStation,
     @required this.index,
   }) : super(key: key);
 
@@ -24,8 +28,8 @@ class Player extends StatefulWidget {
 class _PlayerState extends State<Player> {
   AudioPlaybackState playbackState;
   Icon playPauseBtn;
-  String _oldUrl = '';
   bool _buffering = false;
+  String _oldId = '';
 
   @override
   void initState() {
@@ -63,34 +67,6 @@ class _PlayerState extends State<Player> {
     super.dispose();
   }
 
-  // Call this to send information about the current station to the
-  // audio service.
-  Future<void> updatePlayerMetadata() async {
-    if (widget.station.url == _oldUrl) {
-      // Don't update if the station hasn't changed since the last time we
-      // sent information.
-      return;
-    }
-
-    PlaybackState state = AudioService.playbackState;
-    bool wasPlaying = state?.basicState == BasicPlaybackState.playing;
-    if (wasPlaying) {
-      await AudioService.pause();
-    }
-    // Our custom addQueueItem() handler is really a setQueueItem() function,
-    // it clears the 'queue' before adding the new item, so there is only
-    // ever one item in the queue at a time.
-    await AudioService.addQueueItem(MediaItem(
-      id: widget.station.url,
-      album: '${widget.station.frequency} FM',
-      title: widget.station.name,
-    ));
-    _oldUrl = widget.station.url;
-    if (wasPlaying) {
-      await AudioService.play();
-    }
-  }
-
   void connectBackgroundTask() async {
     await AudioService.connect();
     // If the background task hasn't been started yet, then go ahead and start it.
@@ -102,16 +78,54 @@ class _PlayerState extends State<Player> {
         androidNotificationIcon: "mipmap/ic_launcher",
         enableQueue: true,
       );
+      // Send metadata about all the stations so that the player can change
+      // between stations without help from the main process.
+      for (RadioStation station in widget.stations) {
+        print(station.url);
+        await AudioService.addQueueItem(MediaItem(
+          id: station.url,
+          title: station.name,
+          album: '${station.frequency}',
+        ));
+      }
+      // Show the current station.
+      await AudioService.skipToQueueItem(widget.station.url);
     }
     // Setup listeners so that the state changes when the audio player is
     // controlled outside the GUI.
     listenForAudioPlayerStateChanges();
+    listenForAudioPlayerMediaChanges();
   }
 
-  void listenForAudioPlayerStateChanges() async {
-    await for (PlaybackState state in AudioService.playbackStateStream) {
-      if (state == null) continue;
+  void listenForAudioPlayerStateChanges() {
+    AudioService.playbackStateStream.listen((PlaybackState state) {
+      if (state == null) return;
       setState(() => this.displayPlaybackState(state?.basicState));
+    });
+  }
+
+  void listenForAudioPlayerMediaChanges() {
+    AudioService.currentMediaItemStream.listen((item) {
+      // We store the url of the station in the 'id' field because there is
+      // no other appropriate field in MediaItem to store it in.
+      String itemUrl = item.id;
+      if (itemUrl != widget.station.url) {
+        String stationId =
+            widget.stations.firstWhere((station) => station.url == itemUrl).id;
+        widget.selectStation(stationId);
+      }
+    });
+  }
+
+  // Makes sure that the background service is currently set to play the station
+  // contained in widget.station.
+  Future<void> ensureServiceIsPlayingCorrectStation() async {
+    // Performing this check ensures that we only tell the backend to change the
+    // station if it was changed from the GUI, which ensures that we don't step
+    // on any efforts to change the station from the notification.
+    if (widget.station.url != _oldId) {
+      await AudioService.skipToQueueItem(widget.station.url);
+      _oldId = widget.station.url;
     }
   }
 
@@ -119,27 +133,23 @@ class _PlayerState extends State<Player> {
     PlaybackState state = AudioService.playbackState;
     if (state?.basicState == BasicPlaybackState.playing) {
       await AudioService.pause();
-      setState(() => playPauseBtn = Icon(Icons.play_circle_outline));
     } else {
-      // Make sure that the player has the metadata for the current station
-      // before playing.
-      await updatePlayerMetadata();
+      // Make sure the background task has selected the correct station before
+      // asking it to play.
+      await ensureServiceIsPlayingCorrectStation();
       await AudioService.play();
-      setState(() => playPauseBtn = Icon(Icons.pause_circle_outline));
     }
   }
 
   void _printDebugInfo() async {
-//    audioPlayer.playbackStateStream.listen((state) {}, onDone: );
-    // print("playbackState: ${this.audioPlayer.playbackState}");
     print(await AudioService.running);
   }
 
   @override
   Widget build(BuildContext context) {
-    // The widget gets rebuilt when a new station is selected. Make sure that
-    // the background service has the metadata for the current station.
-    updatePlayerMetadata();
+    // Rebuild gets called whenever the selected station is changed. Make sure
+    // that the background task also knows what station we changed to.
+    ensureServiceIsPlayingCorrectStation();
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       decoration: BoxDecoration(
@@ -205,16 +215,28 @@ MediaControl stopControl = MediaControl(
   label: 'Stop',
   action: MediaAction.stop,
 );
+MediaControl previousControl = MediaControl(
+  androidIcon: 'drawable/ic_play_arrow',
+  label: 'Previous Station',
+  action: MediaAction.skipToPrevious,
+);
+MediaControl nextControl = MediaControl(
+  androidIcon: 'drawable/ic_play_arrow',
+  label: 'Next Station',
+  action: MediaAction.skipToNext,
+);
 
 class MyBackgroundTask extends BackgroundAudioTask {
   final _audioPlayer = AudioPlayer();
-  List<MediaItem> _queue = [MediaItem(id: '', title: 'None', album: 'Radio')];
+  List<MediaItem> _queue = [];
+  int _currentQueueIndex = 0;
   Completer _endGuard = new Completer<void>();
   bool _reloadMedia = false;
 
   @override
   Future<void> onStart() async {
     AudioServiceBackground.setQueue(_queue);
+    setState(BasicPlaybackState.paused);
     await _endGuard.future;
     await _audioPlayer.dispose();
   }
@@ -227,52 +249,75 @@ class MyBackgroundTask extends BackgroundAudioTask {
 
   @override
   void onAddQueueItem(MediaItem item) {
-    if (item.id != _queue[0].id) {
-      _reloadMedia = true;
-    }
-    _queue[0] = item;
+    _queue.add(item);
     AudioServiceBackground.setQueue(_queue);
   }
 
   @override
+  void onSkipToQueueItem(String id) async {
+    int oldIndex = _currentQueueIndex;
+    _currentQueueIndex = _queue.indexWhere((item) => item.id == id);
+    if (oldIndex != _currentQueueIndex) {
+      await onStationChange();
+    }
+  }
+
+  @override
   void onPlay() async {
-    AudioServiceBackground.setState(
-      controls: [pauseControl],
-      systemActions: [],
-      basicState: BasicPlaybackState.playing,
-    );
     // Doing the actual loading here in the onPlay() method ensures that the
     // loading of the media will complete before play() is called.
     if (_reloadMedia) {
       _reloadMedia = false;
-      AudioServiceBackground.setMediaItem(_queue[0]);
       // Tell the main process that the audio is buffering.
-      AudioServiceBackground.setState(
-          controls: [pauseControl],
-          systemActions: [],
-          basicState: BasicPlaybackState.buffering);
-      await _audioPlayer.setUrl(_queue[0].id);
-      AudioServiceBackground.setState(
-          controls: [pauseControl],
-          systemActions: [],
-          basicState: BasicPlaybackState.playing);
+      setState(BasicPlaybackState.buffering);
+      await _audioPlayer.setUrl(_queue[_currentQueueIndex].id);
     }
+    setState(BasicPlaybackState.playing);
 
     _audioPlayer.play();
   }
 
   @override
   void onPause() async {
-    AudioServiceBackground.setState(
-      controls: [playControl],
-      systemActions: [],
-      basicState: BasicPlaybackState.paused,
-    );
+    setState(BasicPlaybackState.paused);
     await _audioPlayer.pause();
   }
 
   @override
   void onClick(MediaButton button) {
     // Your custom dart code to handle a media button click.
+  }
+
+  @override
+  void onSkipToPrevious() async {
+    if (_currentQueueIndex == 0) _currentQueueIndex = _queue.length;
+    _currentQueueIndex--;
+    await onStationChange();
+  }
+
+  @override
+  void onSkipToNext() async {
+    _currentQueueIndex++;
+    if (_currentQueueIndex == _queue.length) _currentQueueIndex = 0;
+    await onStationChange();
+  }
+
+  Future<void> onStationChange() async {
+    _reloadMedia = true;
+    AudioServiceBackground.setMediaItem(_queue[_currentQueueIndex]);
+    if (AudioServiceBackground.state.basicState == BasicPlaybackState.playing) {
+      await _audioPlayer.pause();
+      // Reload the media.
+      onPlay();
+    }
+  }
+
+  void setState(BasicPlaybackState state) {
+    bool playing = state == BasicPlaybackState.playing;
+    AudioServiceBackground.setState(controls: [
+      previousControl,
+      playing ? pauseControl : playControl,
+      nextControl
+    ], systemActions: [], basicState: state);
   }
 }

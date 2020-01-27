@@ -111,6 +111,8 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             Player(
               station: _chosenStation,
+              stations: _radioList,
+              selectStation: this._selectStation,
               index: _selectedStationIndex,
             ),
             BottomNavigation(
