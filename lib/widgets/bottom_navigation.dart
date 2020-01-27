@@ -21,6 +21,10 @@ class BottomNavigation extends StatelessWidget {
           title: Text("Stations"),
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.favorite),
+          title: Text("Favorites"),
+        ),
+        BottomNavigationBarItem(
           icon: Icon(
             Icons.settings,
             color: Colors.white,
