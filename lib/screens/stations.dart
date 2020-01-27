@@ -22,12 +22,8 @@ class StationsScreen extends StatelessWidget {
         children: this.stations.map((station) {
           int index = this.stations.indexOf(station);
           return RadioCard(
-            station.id,
-            station.name,
-            station.frequency,
-            station.url,
+            station,
             index,
-            station.selected,
             this.selectStation,
           );
         }).toList(),
