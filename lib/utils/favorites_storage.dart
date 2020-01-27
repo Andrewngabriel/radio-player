@@ -6,53 +6,52 @@ import 'package:path_provider/path_provider.dart';
 import '../models/radio_station.dart';
 
 class FavoritesStorage {
-  Future get _localPath async {
+  Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }
 
-  Future get _localFile async {
+  Future<File> get _localFile async {
     final path = await _localPath;
     return File('$path/radioFavorites.dat');
   }
 
-  Future writeFavorites(List favoritesList) async {
+  Future<bool> writeFavorites(List<RadioStation> favoritesList) async {
     try {
       final file = await _localFile;
 
-      // Read the file
       String json = jsonEncode(favoritesList);
-
-      print("JSON writing to file: " + json);
-
       await file.writeAsString(json, mode: FileMode.write);
 
       return true;
     } catch (e) {
-      print('error $e');
+      print(e);
     }
 
     return false;
   }
 
-  Future readFavorites() async {
+  Future<List<RadioStation>> readFavorites() async {
     try {
       final file = await _localFile;
 
-      // Read the file
-      String jsonString = await file.readAsString();
-
-      print("JSON reading from file: " + jsonString);
+      String jsonString;
+      if (await file.exists()) {
+        // Read the file
+        jsonString = await file.readAsString();
+      } else {
+        jsonString = '[]';
+      }
 
       Iterable jsonMap = jsonDecode(jsonString);
 
-      List favs = jsonMap
+      List<RadioStation> favs = jsonMap
           .map((parsedJson) => RadioStation.fromJson(parsedJson))
           .toList();
 
       return favs;
     } catch (e) {
-      print('error $e');
+      print(e);
     }
 
     return List();

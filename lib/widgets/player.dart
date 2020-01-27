@@ -73,9 +73,7 @@ class _PlayerState extends State<Player> {
       // If the background task is already running, load the current channel
       // from the background task.
       String currentStationUrl = AudioService.currentMediaItem?.id;
-      print('Current station: $currentStationUrl');
       if (currentStationUrl == null) {
-        print('Selecting 0');
         widget.selectStation(widget.stations[0].id);
       } else {
         String currentStationId = widget.stations
@@ -84,7 +82,6 @@ class _PlayerState extends State<Player> {
         widget.selectStation(currentStationId);
       }
     } else {
-      print('Starting from scratch.');
       // If the background task isn't running, then go ahead and start it.
       await AudioService.start(
         backgroundTaskEntrypoint: backgroundTaskEntryPoint,
@@ -96,7 +93,6 @@ class _PlayerState extends State<Player> {
       // Send metadata about all the stations so that the player can change
       // between stations without help from the main process.
       for (RadioStation station in widget.stations) {
-        print(station.url);
         await AudioService.addQueueItem(MediaItem(
           id: station.url,
           title: station.name,
@@ -139,8 +135,6 @@ class _PlayerState extends State<Player> {
     // station if it was changed from the GUI, which ensures that we don't step
     // on any efforts to change the station from the notification.
     if (widget.station.url != _oldId) {
-      print(widget.station.url);
-      print(await AudioService.queue);
       await AudioService.skipToQueueItem(widget.station.url);
       _oldId = widget.station.url;
     }

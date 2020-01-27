@@ -2,8 +2,21 @@ import 'package:radio_player/models/radio_station.dart';
 import 'package:radio_player/utils/favorites_storage.dart';
 
 class StationFavorites {
+  static final StationFavorites _instance = StationFavorites._internal();
   FavoritesStorage storage = FavoritesStorage();
   List<RadioStation> favorites = [];
+
+  // Singleton pattern, so that we only ever have one instance of
+  // StationFavorites, shared between everything that requires it.
+  factory StationFavorites() {
+    return _instance;
+  }
+
+  StationFavorites._internal() {
+    // Do this so that if we try adding a favorite before reading a favorite, 
+    // we still have an accurate list to go off of.
+    readAllFavorites();
+  }
 
   Future<List<RadioStation>> readAllFavorites() async {
     this.favorites = await storage.readFavorites();
