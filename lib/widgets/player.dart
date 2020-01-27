@@ -69,8 +69,23 @@ class _PlayerState extends State<Player> {
 
   void connectBackgroundTask() async {
     await AudioService.connect();
-    // If the background task hasn't been started yet, then go ahead and start it.
-    if (!await AudioService.running) {
+    if (await AudioService.running) {
+      // If the background task is already running, load the current channel
+      // from the background task.
+      String currentStationUrl = AudioService.currentMediaItem?.id;
+      print('Current station: $currentStationUrl');
+      if (currentStationUrl == null) {
+        print('Selecting 0');
+        widget.selectStation(widget.stations[0].id);
+      } else {
+        String currentStationId = widget.stations
+            .firstWhere((station) => station.url == currentStationUrl)
+            .id;
+        widget.selectStation(currentStationId);
+      }
+    } else {
+      print('Starting from scratch.');
+      // If the background task isn't running, then go ahead and start it.
       await AudioService.start(
         backgroundTaskEntrypoint: backgroundTaskEntryPoint,
         notificationColor: 0xFF2196f3,
@@ -88,6 +103,7 @@ class _PlayerState extends State<Player> {
           album: '${station.frequency}',
         ));
       }
+      widget.selectStation(widget.stations[0].id);
     }
     // Setup listeners so that the state changes when the audio player is
     // controlled outside the GUI.
@@ -107,7 +123,7 @@ class _PlayerState extends State<Player> {
       // We store the url of the station in the 'id' field because there is
       // no other appropriate field in MediaItem to store it in.
       String itemUrl = item.id;
-      if (itemUrl != widget.station.url) {
+      if (itemUrl != widget.station?.url) {
         String stationId =
             widget.stations.firstWhere((station) => station.url == itemUrl).id;
         widget.selectStation(stationId);
@@ -118,10 +134,13 @@ class _PlayerState extends State<Player> {
   // Makes sure that the background service is currently set to play the station
   // contained in widget.station.
   Future<void> ensureServiceIsPlayingCorrectStation() async {
+    if (widget.station == null) return;
     // Performing this check ensures that we only tell the backend to change the
     // station if it was changed from the GUI, which ensures that we don't step
     // on any efforts to change the station from the notification.
     if (widget.station.url != _oldId) {
+      print(widget.station.url);
+      print(await AudioService.queue);
       await AudioService.skipToQueueItem(widget.station.url);
       _oldId = widget.station.url;
     }
@@ -164,7 +183,7 @@ class _PlayerState extends State<Player> {
             child: Padding(
               padding: const EdgeInsets.only(top: 10.0),
               child: Text(
-                "${widget.station.name}, ${widget.station.frequency}",
+                "${widget.station?.name}, ${widget.station?.frequency}",
                 style: TextStyle(color: Colors.white, fontSize: 20.0),
               ),
             ),

@@ -54,8 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 //    _getMoreStations();
     this._radioList = stationList.radioList;
-    this._radioList[0].selected = true;
-    this._chosenStation = this._radioList[0];
+    this._chosenStation = null;
     _screens = [
       StationsScreen(
         stations: this._radioList,
@@ -68,7 +67,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _selectStation(String id) async {
     RadioStation station = this.stationList.findStation(id);
     int index = this._radioList.indexOf(station);
-    if (this._selectedStationIndex != index) {
+    if (this._selectedStationIndex != index || _chosenStation == null) {
       setState(() {
         this._radioList[_selectedStationIndex].selected = false;
         this._selectedStationIndex = index;
