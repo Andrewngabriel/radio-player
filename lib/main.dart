@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:radio_player/screens/favorites.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
@@ -61,7 +60,6 @@ class _MyHomePageState extends State<MyHomePage> {
         stations: this._radioList,
         selectStation: this._selectStation,
       ),
-      FavoritesScreen(selectStation: this._selectStation),
       SettingsScreen(),
     ];
   }
@@ -146,18 +144,8 @@ class _MyHomePageState extends State<MyHomePage> {
       case 1:
         {
           setState(() {
-            this._screenTitle = "Favorites";
-            _screens[1] = FavoritesScreen(
-              selectStation: this._selectStation,
-            );
-          });
-        }
-        break;
-      case 2:
-        {
-          setState(() {
             this._screenTitle = "Settings";
-            _screens[2] = SettingsScreen();
+            _screens[1] = SettingsScreen();
           });
         }
         break;
@@ -167,7 +155,6 @@ class _MyHomePageState extends State<MyHomePage> {
             _screens = [
               StationsScreen(
                   stations: _radioList, selectStation: this._selectStation),
-              FavoritesScreen(selectStation: this._selectStation),
               SettingsScreen(),
             ];
           });
