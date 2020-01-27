@@ -259,13 +259,13 @@ class MyBackgroundTask extends BackgroundAudioTask {
   }
 
   @override
-  void onAddQueueItem(MediaItem item) {
+  void onAddQueueItem(MediaItem item) async {
     _queue.add(item);
-    // If this is the first item, display it in the notification.
-    if (_queue.length == 1) {
-      AudioServiceBackground.setMediaItem(item);
-    }
     AudioServiceBackground.setQueue(_queue);
+    // If this is the first item, do the necessary loading.
+    if (_queue.length == 1) {
+      await onStationChange();
+    }
   }
 
   @override
