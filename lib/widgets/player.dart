@@ -57,11 +57,6 @@ class _PlayerState extends State<Player> {
   }
 
   @override
-  void didUpdateWidget(Player oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
-
-  @override
   void dispose() {
     AudioService.disconnect();
     super.dispose();
@@ -183,9 +178,9 @@ class _PlayerState extends State<Player> {
             ),
           ),
           _buffering
-              ? SpinKitChasingDots(
+              ? SpinKitRipple(
                   color: Colors.white,
-                  size: 50.0,
+                  size: 50,
                 )
               : IconButton(
                   icon: this.playPauseBtn,
