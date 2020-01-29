@@ -189,8 +189,8 @@ class _PlayerState extends State<Player> {
               icon: Icon(favorites.isFavorite(widget.station)
                   ? Icons.favorite
                   : Icons.favorite_border),
-              color: Colors.white,
-              iconSize: 50,
+              color: Colors.red,
+              iconSize: 30,
               onPressed: () => this.setState(() {
                 if (favorites.isFavorite(widget.station)) {
                   favorites.removeFavorite(widget.station);
@@ -198,7 +198,7 @@ class _PlayerState extends State<Player> {
                   favorites.addFavorite(widget.station);
                 }
               }),
-              padding: EdgeInsets.only(right: 0.0),
+              padding: EdgeInsets.only(right: 15),
             ),
           ),
           _buffering
@@ -213,13 +213,6 @@ class _PlayerState extends State<Player> {
                   onPressed: this._playPause,
                   padding: EdgeInsets.only(right: 0.0),
                 ),
-          IconButton(
-            icon: Icon(Icons.settings),
-            color: Colors.white,
-            iconSize: 50,
-            onPressed: this._printDebugInfo,
-            padding: EdgeInsets.only(right: 0.0),
-          ),
         ],
       ),
     );
