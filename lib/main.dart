@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 import 'package:radio_player/screens/favorites.dart';
+import 'package:radio_player/utils/station_favorites.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
@@ -87,43 +90,48 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0.0,
-        title: Text(this._screenTitle, style: TextStyle(color: Colors.white)),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(
-              Icons.share,
-              color: Colors.white,
-              size: 35,
-            ),
-            padding: EdgeInsets.only(right: 5.0),
-            onPressed: null,
+    return ChangeNotifierProvider.value(
+        // StationFavorites is a singleton, so we use value() instead of the
+        // default constructor.
+        value: StationFavorites(),
+        child: Scaffold(
+          appBar: AppBar(
+            elevation: 0.0,
+            title:
+                Text(this._screenTitle, style: TextStyle(color: Colors.white)),
+            actions: <Widget>[
+              IconButton(
+                icon: Icon(
+                  Icons.share,
+                  color: Colors.white,
+                  size: 35,
+                ),
+                padding: EdgeInsets.only(right: 5.0),
+                onPressed: null,
+              ),
+            ],
           ),
-        ],
-      ),
-      body: this._screens[this._selectedPageIndex],
-      bottomNavigationBar: Container(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: <Widget>[
-            Player(
-              station: _chosenStation,
-              stations: _radioList,
-              selectStation: this._selectStation,
-              index: _selectedStationIndex,
+          body: this._screens[this._selectedPageIndex],
+          bottomNavigationBar: Container(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Player(
+                  station: _chosenStation,
+                  stations: _radioList,
+                  selectStation: this._selectStation,
+                  index: _selectedStationIndex,
+                ),
+                BottomNavigation(
+                  changeScreen: this.changeScreen,
+                  menuIndex: this._selectedPageIndex,
+                ),
+              ],
             ),
-            BottomNavigation(
-              changeScreen: this.changeScreen,
-              menuIndex: this._selectedPageIndex,
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   void refreshScreen(int index) {

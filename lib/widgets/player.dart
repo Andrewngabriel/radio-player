@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:provider/provider.dart';
 import 'package:radio_player/utils/station_favorites.dart';
 
 import '../models/radio_station.dart';
@@ -183,20 +184,22 @@ class _PlayerState extends State<Player> {
               ),
             ),
           ),
-          IconButton(
-            icon: Icon(StationFavorites().isFavorite(widget.station)
-                ? Icons.favorite
-                : Icons.favorite_border),
-            color: Colors.white,
-            iconSize: 50,
-            onPressed: () => this.setState(() {
-              if (StationFavorites().isFavorite(widget.station)) {
-                StationFavorites().removeFavorite(widget.station);
-              } else {
-                StationFavorites().addFavorite(widget.station);
-              }
-            }),
-            padding: EdgeInsets.only(right: 0.0),
+          Consumer<StationFavorites>(
+            builder: (context, favorites, _) => IconButton(
+              icon: Icon(favorites.isFavorite(widget.station)
+                  ? Icons.favorite
+                  : Icons.favorite_border),
+              color: Colors.white,
+              iconSize: 50,
+              onPressed: () => this.setState(() {
+                if (favorites.isFavorite(widget.station)) {
+                  favorites.removeFavorite(widget.station);
+                } else {
+                  favorites.addFavorite(widget.station);
+                }
+              }),
+              padding: EdgeInsets.only(right: 0.0),
+            ),
           ),
           _buffering
               ? SpinKitChasingDots(

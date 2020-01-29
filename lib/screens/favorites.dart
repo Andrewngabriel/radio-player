@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:radio_player/utils/station_favorites.dart';
 
 import '../models/radio_station.dart';
@@ -12,42 +13,19 @@ class FavoritesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<RadioStation>>(
-      future: StationFavorites().readAllFavorites(),
-      builder: (BuildContext context, AsyncSnapshot snapshot) {
+    return Consumer<StationFavorites>(
+      builder: (context, favorites, _) {
         List<Widget> children;
-        List<RadioStation> favoriteStations = snapshot.data;
+        List<RadioStation> favoriteStations = favorites.readAllFavorites();
 
-        if (snapshot.hasData) {
-          children = favoriteStations.map((station) {
-            int index = favoriteStations.indexOf(station);
-            return RadioCard(
-                station,
-                index,
-                selectStation,
-            );
-          }).toList();
-        } else if (snapshot.hasError) {
-          children = <Widget>[
-            Icon(Icons.error_outline, color: Colors.red, size: 60),
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text('Error: ${snapshot.error}'),
-            )
-          ];
-        } else {
-          children = [
-            SizedBox(
-              child: CircularProgressIndicator(),
-              width: 60,
-              height: 60,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Text('Awaiting result...'),
-            )
-          ];
-        }
+        children = favoriteStations.map((station) {
+          int index = favoriteStations.indexOf(station);
+          return RadioCard(
+            station,
+            index,
+            selectStation,
+          );
+        }).toList();
         return Container(
           decoration: Config.backgroundGradient(),
           child: ListView(padding: EdgeInsets.all(10.0), children: children),

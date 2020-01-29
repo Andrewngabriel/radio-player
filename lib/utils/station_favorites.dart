@@ -1,7 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:radio_player/models/radio_station.dart';
 import 'package:radio_player/utils/favorites_storage.dart';
 
-class StationFavorites {
+class StationFavorites extends ChangeNotifier {
   static final StationFavorites _instance = StationFavorites._internal();
   FavoritesStorage storage = FavoritesStorage();
   List<RadioStation> favorites = [];
@@ -13,19 +14,21 @@ class StationFavorites {
   }
 
   StationFavorites._internal() {
-    // Do this so that if we try adding a favorite before reading a favorite, 
-    // we still have an accurate list to go off of.
-    readAllFavorites();
+    // Load the file once, so that all the other functions can have synchronous
+    // results.
+    () async {
+      this.favorites = await storage.readFavorites();
+    }();
   }
 
-  Future<List<RadioStation>> readAllFavorites() async {
-    this.favorites = await storage.readFavorites();
+  List<RadioStation> readAllFavorites() {
     return this.favorites;
   }
 
   Future addFavorite(RadioStation station) async {
     if (!this.favorites.any((fStation) => fStation.name == station.name)) {
       this.favorites.add(station);
+      notifyListeners();
 
       await storage.writeFavorites(this.favorites);
     }
@@ -33,6 +36,7 @@ class StationFavorites {
 
   Future removeFavorite(RadioStation station) async {
     this.favorites.removeWhere((fStation) => fStation.name == station.name);
+      notifyListeners();
 
     await storage.writeFavorites(this.favorites);
   }
