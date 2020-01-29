@@ -25,44 +25,67 @@ class Player extends StatefulWidget {
   _PlayerState createState() => _PlayerState();
 }
 
-class _PlayerState extends State<Player> {
-  AudioPlaybackState playbackState;
-  Icon playPauseBtn;
+class _PlayerState extends State<Player> with WidgetsBindingObserver {
+  bool _playing = false;
+  bool _notStopped = false;
   bool _buffering = false;
   String _oldId = '';
 
   @override
   void initState() {
     super.initState();
-    connectBackgroundTask();
-    PlaybackState state = AudioService.playbackState;
-    displayPlaybackState(state?.basicState);
+    _setupAudioService();
+    // So we can detect the app being paused / resumed.
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AudioService.disconnect();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      if (_notStopped && !_playing) {
+        AudioService.stop();
+      }
+    }
   }
 
   // Sets this widget state according to the current playback state.
   // This includes things like setting the appropriate icon for the button.
   void displayPlaybackState(BasicPlaybackState state) {
     if (state == BasicPlaybackState.playing) {
-      playPauseBtn = Icon(Icons.pause_circle_outline);
+      _notStopped = true;
+      _playing = true;
       _buffering = false;
     } else if (state == BasicPlaybackState.paused) {
-      playPauseBtn = Icon(Icons.play_circle_outline);
+      _notStopped = true;
+      _playing = false;
       _buffering = false;
     } else if (state == BasicPlaybackState.buffering) {
+      _notStopped = true;
+      _playing = false;
       _buffering = true;
+    } else if (state == BasicPlaybackState.stopped) {
+      _notStopped = false;
+      _playing = false;
+      _buffering = false;
     } else {
-      playPauseBtn = Icon(Icons.play_circle_outline);
+      _notStopped = false;
+      _playing = false;
       _buffering = false;
     }
   }
 
-  @override
-  void dispose() {
-    AudioService.disconnect();
-    super.dispose();
-  }
-
-  void connectBackgroundTask() async {
+  // Called once, when the widget first becomes visible.
+  Future<void> _setupAudioService() async {
+    if (AudioService.connected) {
+      return;
+    }
     await AudioService.connect();
     if (await AudioService.running) {
       // If the background task is already running, load the current channel
@@ -76,30 +99,37 @@ class _PlayerState extends State<Player> {
             .id;
         widget.selectStation(currentStationId);
       }
+      PlaybackState state = AudioService.playbackState;
+      displayPlaybackState(state?.basicState);
     } else {
-      // If the background task isn't running, then go ahead and start it.
-      await AudioService.start(
-        backgroundTaskEntrypoint: backgroundTaskEntryPoint,
-        notificationColor: 0xFF2196f3,
-        androidNotificationChannelName: 'Music Player',
-        androidNotificationIcon: "mipmap/ic_launcher",
-        enableQueue: true,
-      );
-      // Send metadata about all the stations so that the player can change
-      // between stations without help from the main process.
-      for (RadioStation station in widget.stations) {
-        await AudioService.addQueueItem(MediaItem(
-          id: station.url,
-          title: station.name,
-          album: '${station.frequency}',
-        ));
-      }
       widget.selectStation(widget.stations[0].id);
     }
     // Setup listeners so that the state changes when the audio player is
     // controlled outside the GUI.
     listenForAudioPlayerStateChanges();
     listenForAudioPlayerMediaChanges();
+  }
+
+  Future<void> _startAudioService() async {
+    if (await AudioService.running) {
+      return;
+    }
+    await AudioService.start(
+      backgroundTaskEntrypoint: backgroundTaskEntryPoint,
+      notificationColor: 0xFF2196f3,
+      androidNotificationChannelName: 'Music Player',
+      androidNotificationIcon: "mipmap/ic_launcher",
+      enableQueue: true,
+    );
+    // Send metadata about all the stations so that the player can change
+    // between stations without help from the main process.
+    for (RadioStation station in widget.stations) {
+      await AudioService.addQueueItem(MediaItem(
+        id: station.url,
+        title: station.name,
+        album: '${station.frequency}',
+      ));
+    }
   }
 
   void listenForAudioPlayerStateChanges() {
@@ -111,6 +141,7 @@ class _PlayerState extends State<Player> {
 
   void listenForAudioPlayerMediaChanges() {
     AudioService.currentMediaItemStream.listen((item) {
+      if (item == null) return;
       // We store the url of the station in the 'id' field because there is
       // no other appropriate field in MediaItem to store it in.
       String itemUrl = item.id;
@@ -124,27 +155,49 @@ class _PlayerState extends State<Player> {
 
   // Makes sure that the background service is currently set to play the station
   // contained in widget.station.
-  Future<void> ensureServiceIsPlayingCorrectStation() async {
+  Future<void> ensureServiceIsPlayingCorrectStation(
+      {bool force = false}) async {
+    if (!await AudioService.running) return;
     if (widget.station == null) return;
     // Performing this check ensures that we only tell the backend to change the
     // station if it was changed from the GUI, which ensures that we don't step
     // on any efforts to change the station from the notification.
-    if (widget.station.url != _oldId) {
+    if (widget.station.url != _oldId || force) {
       await AudioService.skipToQueueItem(widget.station.url);
       _oldId = widget.station.url;
     }
   }
 
   void _playPause() async {
-    PlaybackState state = AudioService.playbackState;
-    if (state?.basicState == BasicPlaybackState.playing) {
+    if (_playing) {
       await AudioService.pause();
     } else {
-      // Make sure the background task has selected the correct station before
-      // asking it to play.
-      await ensureServiceIsPlayingCorrectStation();
+      // If the background task isn't running, then start it.
+      if (!await AudioService.running) {
+        setState(() {
+          // This way the user knows something is happening, because starting
+          // the audio service will take a little while.
+          _buffering = true;
+        });
+        await _startAudioService();
+        // Force the player to change to the station.
+        await ensureServiceIsPlayingCorrectStation(force: true);
+      } else {
+        // Make sure the background task has selected the correct station before
+        // asking it to play.
+        await ensureServiceIsPlayingCorrectStation();
+      }
       await AudioService.play();
     }
+  }
+
+  void _stop() async {
+    if (!await AudioService.running) return;
+    await AudioService.stop();
+    setState(() {
+      _playing = false;
+      _buffering = false;
+    });
   }
 
   void _printDebugInfo() async {
@@ -177,13 +230,22 @@ class _PlayerState extends State<Player> {
               ),
             ),
           ),
+          _notStopped
+              ? IconButton(
+                  icon: Icon(Icons.stop),
+                  onPressed: this._stop,
+                  color: Colors.white,
+                  iconSize: 36)
+              : Container(),
           _buffering
               ? SpinKitRipple(
                   color: Colors.white,
                   size: 50,
                 )
               : IconButton(
-                  icon: this.playPauseBtn,
+                  icon: Icon(_playing
+                      ? Icons.pause_circle_outline
+                      : Icons.play_circle_outline),
                   color: Colors.white,
                   iconSize: 50,
                   onPressed: this._playPause,
@@ -242,13 +304,13 @@ class MyBackgroundTask extends BackgroundAudioTask {
   @override
   Future<void> onStart() async {
     AudioServiceBackground.setQueue(_queue);
-    setState(BasicPlaybackState.paused);
     await _endGuard.future;
     await _audioPlayer.dispose();
   }
 
   @override
   void onStop() async {
+    setState(BasicPlaybackState.stopped);
     await _audioPlayer.stop();
     _endGuard.complete();
   }
@@ -257,10 +319,6 @@ class MyBackgroundTask extends BackgroundAudioTask {
   void onAddQueueItem(MediaItem item) async {
     _queue.add(item);
     AudioServiceBackground.setQueue(_queue);
-    // If this is the first item, do the necessary loading.
-    if (_queue.length == 1) {
-      await onStationChange();
-    }
   }
 
   @override
@@ -280,7 +338,10 @@ class MyBackgroundTask extends BackgroundAudioTask {
       _reloadMedia = false;
       // Tell the main process that the audio is buffering.
       setState(BasicPlaybackState.buffering);
-      await _audioPlayer.setUrl(_queue[_currentQueueIndex].id);
+      var duration = await _audioPlayer.setUrl(_queue[_currentQueueIndex].id);
+      if (duration == null) { // Loading the file was interrupted.
+        return;
+      }
     }
     setState(BasicPlaybackState.playing);
 
@@ -313,11 +374,20 @@ class MyBackgroundTask extends BackgroundAudioTask {
   }
 
   Future<void> onStationChange() async {
+    // This value is only -1 when an invalid request was submitted.
+    if (_currentQueueIndex == -1) {
+      return;
+    }
     _reloadMedia = true;
     AudioServiceBackground.setMediaItem(_queue[_currentQueueIndex]);
     if (AudioServiceBackground.state.basicState == BasicPlaybackState.playing) {
       await _audioPlayer.pause();
       // Reload the media.
+      onPlay();
+    } else if (AudioServiceBackground.state.basicState ==
+        BasicPlaybackState.buffering) {
+      // Stop buffering the old media, play the new media.
+      await _audioPlayer.stop();
       onPlay();
     }
   }
@@ -326,6 +396,7 @@ class MyBackgroundTask extends BackgroundAudioTask {
     bool playing = state == BasicPlaybackState.playing;
     AudioServiceBackground.setState(controls: [
       previousControl,
+      stopControl,
       playing ? pauseControl : playControl,
       nextControl
     ], systemActions: [], basicState: state);
