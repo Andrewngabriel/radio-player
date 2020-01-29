@@ -28,6 +28,7 @@ dependencies:
   just_audio: ^0.0.6
   audio_service: ^0.5.7
   path_provider: ^1.5.1
+  provider: ^4.0.2
   google_fonts: ^0.2.0
   http: ^0.12.0+3
   html: ^0.14.0+3
