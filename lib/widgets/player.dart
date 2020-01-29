@@ -7,6 +7,8 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/radio_station.dart';
 
+const String STREAM_TIME_OUT_ERROR = 'Error: Stream timed out.';
+
 class Player extends StatefulWidget {
   final RadioStation station;
   final List<RadioStation> stations;
@@ -30,6 +32,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
   bool _notStopped = false;
   bool _buffering = false;
   String _oldId = '';
+  BuildContext _context;
 
   @override
   void initState() {
@@ -56,29 +59,39 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
   }
 
   // Sets this widget state according to the current playback state.
-  // This includes things like setting the appropriate icon for the button.
-  void displayPlaybackState(BasicPlaybackState state) {
-    if (state == BasicPlaybackState.playing) {
-      _notStopped = true;
-      _playing = true;
-      _buffering = false;
-    } else if (state == BasicPlaybackState.paused) {
-      _notStopped = true;
-      _playing = false;
-      _buffering = false;
-    } else if (state == BasicPlaybackState.buffering) {
-      _notStopped = true;
-      _playing = false;
-      _buffering = true;
-    } else if (state == BasicPlaybackState.stopped) {
-      _notStopped = false;
-      _playing = false;
-      _buffering = false;
-    } else {
-      _notStopped = false;
-      _playing = false;
-      _buffering = false;
+  void _displayPlaybackState(BasicPlaybackState state) {
+    setState(() {
+      if (state == BasicPlaybackState.playing) {
+        _notStopped = true;
+        _playing = true;
+        _buffering = false;
+      } else if (state == BasicPlaybackState.paused ||
+          state == BasicPlaybackState.error) {
+        _notStopped = true;
+        _playing = false;
+        _buffering = false;
+      } else if (state == BasicPlaybackState.buffering) {
+        _notStopped = true;
+        _playing = false;
+        _buffering = true;
+      } else if (state == BasicPlaybackState.stopped) {
+        _notStopped = false;
+        _playing = false;
+        _buffering = false;
+      } else {
+        _notStopped = false;
+        _playing = false;
+        _buffering = false;
+      }
+    });
+    if (state == BasicPlaybackState.error) {
+      this._showErrorSnackbar(STREAM_TIME_OUT_ERROR);
     }
+  }
+
+  void _showErrorSnackbar(String message) {
+    Scaffold.of(_context).showSnackBar(
+        SnackBar(backgroundColor: Colors.red, content: Text(message)));
   }
 
   // Called once, when the widget first becomes visible.
@@ -100,7 +113,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
         widget.selectStation(currentStationId);
       }
       PlaybackState state = AudioService.playbackState;
-      displayPlaybackState(state?.basicState);
+      _displayPlaybackState(state?.basicState);
     } else {
       widget.selectStation(widget.stations[0].id);
     }
@@ -135,7 +148,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
   void listenForAudioPlayerStateChanges() {
     AudioService.playbackStateStream.listen((PlaybackState state) {
       if (state == null) return;
-      setState(() => this.displayPlaybackState(state?.basicState));
+      _displayPlaybackState(state?.basicState);
     });
   }
 
@@ -206,6 +219,9 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // We need to store the context so that we can show snackbars to the user
+    // when errors occur.
+    _context = context;
     // Rebuild gets called whenever the selected station is changed. Make sure
     // that the background task also knows what station we changed to.
     ensureServiceIsPlayingCorrectStation();
@@ -330,6 +346,29 @@ class MyBackgroundTask extends BackgroundAudioTask {
     }
   }
 
+  Future<bool> _loadTrack(String url) async {
+    const SUCCESS = 0;
+    const INTERRUPTED = 1;
+    const TIMEOUT = 2;
+    var future = Future(() async {
+      var duration = await _audioPlayer.setUrl(url);
+      if (duration == null) {
+        return INTERRUPTED;
+      } else {
+        return SUCCESS;
+      }
+    }).timeout(Duration(seconds: 10), onTimeout: () async => TIMEOUT);
+    var result = await future;
+    if (result == SUCCESS) {
+      return true;
+    } else if (result == INTERRUPTED) {
+      return false;
+    } else if (result == TIMEOUT) {
+      setState(BasicPlaybackState.error);
+      return false;
+    }
+  }
+
   @override
   void onPlay() async {
     // Doing the actual loading here in the onPlay() method ensures that the
@@ -338,13 +377,14 @@ class MyBackgroundTask extends BackgroundAudioTask {
       _reloadMedia = false;
       // Tell the main process that the audio is buffering.
       setState(BasicPlaybackState.buffering);
-      var duration = await _audioPlayer.setUrl(_queue[_currentQueueIndex].id);
-      if (duration == null) { // Loading the file was interrupted.
+      var success = await _loadTrack(_queue[_currentQueueIndex].id);
+      if (!success) {
+        // There was a problem loading the track, don't try to play it.
         return;
       }
     }
-    setState(BasicPlaybackState.playing);
 
+    setState(BasicPlaybackState.playing);
     _audioPlayer.play();
   }
 
