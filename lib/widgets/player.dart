@@ -253,8 +253,8 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
               icon: Icon(favorites.isFavorite(widget.station)
                   ? Icons.favorite
                   : Icons.favorite_border),
-              color: Colors.white,
-              iconSize: 50,
+              color: Colors.red,
+              iconSize: 30,
               onPressed: () => this.setState(() {
                 if (favorites.isFavorite(widget.station)) {
                   favorites.removeFavorite(widget.station);
@@ -262,7 +262,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
                   favorites.addFavorite(widget.station);
                 }
               }),
-              padding: EdgeInsets.only(right: 0.0),
+              padding: EdgeInsets.only(right: 15),
             ),
           ),
           _notStopped
@@ -286,13 +286,6 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
                   onPressed: this._playPause,
                   padding: EdgeInsets.only(right: 0.0),
                 ),
-          IconButton(
-            icon: Icon(Icons.settings),
-            color: Colors.white,
-            iconSize: 50,
-            onPressed: this._printDebugInfo,
-            padding: EdgeInsets.only(right: 0.0),
-          ),
         ],
       ),
     );
