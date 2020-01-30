@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:provider/provider.dart';
 import 'package:radio_player/screens/favorites.dart';
-import 'package:radio_player/utils/station_favorites.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
@@ -64,6 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
         stations: this._radioList,
         selectStation: this._selectStation,
       ),
+      FavoritesScreen(selectStation: this._selectStation),
       SettingsScreen(),
     ];
   }
@@ -89,48 +87,43 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-        // StationFavorites is a singleton, so we use value() instead of the
-        // default constructor.
-        value: StationFavorites(),
-        child: Scaffold(
-          appBar: AppBar(
-            elevation: 0.0,
-            title:
-                Text(this._screenTitle, style: TextStyle(color: Colors.white)),
-            actions: <Widget>[
-              IconButton(
-                icon: Icon(
-                  Icons.share,
-                  color: Colors.white,
-                  size: 35,
-                ),
-                padding: EdgeInsets.only(right: 5.0),
-                onPressed: null,
-              ),
-            ],
-          ),
-          body: this._screens[this._selectedPageIndex],
-          bottomNavigationBar: Container(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                Player(
-                  station: _chosenStation,
-                  stations: _radioList,
-                  selectStation: this._selectStation,
-                  index: _selectedStationIndex,
-                ),
-                BottomNavigation(
-                  changeScreen: this.changeScreen,
-                  menuIndex: this._selectedPageIndex,
-                ),
-              ],
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 0.0,
+        title: Text(this._screenTitle, style: TextStyle(color: Colors.white)),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(
+              Icons.share,
+              color: Colors.white,
+              size: 35,
             ),
+            padding: EdgeInsets.only(right: 5.0),
+            onPressed: null,
           ),
-        ));
+        ],
+      ),
+      body: this._screens[this._selectedPageIndex],
+      bottomNavigationBar: Container(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Player(
+              station: _chosenStation,
+              stations: _radioList,
+              selectStation: this._selectStation,
+              index: _selectedStationIndex,
+            ),
+            BottomNavigation(
+              changeScreen: this.changeScreen,
+              menuIndex: this._selectedPageIndex,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void refreshScreen(int index) {
@@ -153,8 +146,18 @@ class _MyHomePageState extends State<MyHomePage> {
       case 1:
         {
           setState(() {
+            this._screenTitle = "Favorites";
+            _screens[1] = FavoritesScreen(
+              selectStation: this._selectStation,
+            );
+          });
+        }
+        break;
+      case 2:
+        {
+          setState(() {
             this._screenTitle = "Settings";
-            _screens[1] = SettingsScreen();
+            _screens[2] = SettingsScreen();
           });
         }
         break;
@@ -164,6 +167,7 @@ class _MyHomePageState extends State<MyHomePage> {
             _screens = [
               StationsScreen(
                   stations: _radioList, selectStation: this._selectStation),
+              FavoritesScreen(selectStation: this._selectStation),
               SettingsScreen(),
             ];
           });
