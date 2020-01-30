@@ -313,7 +313,7 @@ MediaControl nextControl = MediaControl(
 class MyBackgroundTask extends BackgroundAudioTask {
   final _audioPlayer = AudioPlayer();
   List<MediaItem> _queue = [];
-  int _currentQueueIndex = 0;
+  int _currentQueueIndex = -1;
   Completer _endGuard = new Completer<void>();
   bool _reloadMedia = false;
 
@@ -367,6 +367,7 @@ class MyBackgroundTask extends BackgroundAudioTask {
       setState(BasicPlaybackState.error);
       return false;
     }
+    return false;
   }
 
   @override
