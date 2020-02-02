@@ -68,8 +68,8 @@ class _MyHomePageState extends State<MyHomePage> {
     ];
   }
 
-  void _selectStation(String id) async {
-    RadioStation station = this.stationList.findStation(id);
+  void _selectStation(String url) async {
+    RadioStation station = this.stationList.findStation(url);
     int index = this._radioList.indexOf(station);
     if (this._selectedStationIndex != index || _chosenStation == null) {
       setState(() {

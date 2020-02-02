@@ -107,17 +107,14 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
       // from the background task.
       String currentStationUrl = AudioService.currentMediaItem?.id;
       if (currentStationUrl == null) {
-        widget.selectStation(widget.stations[0].id);
+        widget.selectStation(widget.stations[0].url);
       } else {
-        String currentStationId = widget.stations
-            .firstWhere((station) => station.url == currentStationUrl)
-            .id;
-        widget.selectStation(currentStationId);
+        widget.selectStation(currentStationUrl);
       }
       PlaybackState state = AudioService.playbackState;
       _displayPlaybackState(state?.basicState);
     } else {
-      widget.selectStation(widget.stations[0].id);
+      widget.selectStation(widget.stations[0].url);
     }
     // Setup listeners so that the state changes when the audio player is
     // controlled outside the GUI.
@@ -161,9 +158,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
       // no other appropriate field in MediaItem to store it in.
       String itemUrl = item.id;
       if (itemUrl != widget.station?.url) {
-        String stationId =
-            widget.stations.firstWhere((station) => station.url == itemUrl).id;
-        widget.selectStation(stationId);
+        widget.selectStation(itemUrl);
       }
     });
   }

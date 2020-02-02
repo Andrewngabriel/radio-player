@@ -15,7 +15,7 @@ class RadioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OutlineButton(
-      onPressed: () => this._selectStation(this.station.id),
+      onPressed: () => this._selectStation(this.station.url),
       padding: EdgeInsets.all(0),
       borderSide: (this.station.selected)
           ? BorderSide(color: Colors.blue, width: 2.0)

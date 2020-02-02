@@ -20,7 +20,9 @@ class FavoritesStorage {
     try {
       final file = await _localFile;
 
+      print(favoritesList);
       String json = jsonEncode(favoritesList);
+      print(json);
       await file.writeAsString(json, mode: FileMode.write);
 
       return true;
