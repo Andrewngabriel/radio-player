@@ -24,8 +24,8 @@ class StationList {
     initFavoritesList();
   }
 
-  RadioStation findStation(String id) {
-    int stationIndex = radioList.indexWhere((station) => station.id == id);
+  RadioStation findStation(String url) {
+    int stationIndex = radioList.indexWhere((station) => station.url == url);
     return this.radioList[stationIndex];
   }
 
