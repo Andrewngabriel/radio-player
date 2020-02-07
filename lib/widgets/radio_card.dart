@@ -35,7 +35,7 @@ class RadioCard extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
-             (this.station.frequency != 0.0)
+            (this.station.frequency != 0.0)
                 ? Text(
                     this.station.frequency.toString(),
                     textAlign: TextAlign.left,
