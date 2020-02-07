@@ -95,6 +95,32 @@ class StationList {
 
   static List<RadioStation> list = [
     RadioStation(
+      'BBC Arabic',
+      0.0,
+      'http://bbcwssc.ic.llnwd.net/stream/bbcwssc_mp1_ws-araba',
+    ),
+    RadioStation(
+        "Nogoum FM", 100.6, "http://ice31.securenetsystems.net/NOGOUM"),
+    RadioStation(
+      'Al Jazeera Arabic',
+      0.0,
+      'http://aljazeera-ara-apple-live.adaptive.level3.net/apple/aljazeera/arabic/radioaudio.m3u8',
+    ),
+    RadioStation('Rotana FM', 88.0, 'http://philae.shoutca.st:8114/stream/;'),
+    RadioStation('90s FM', 0.0, 'http://64.150.176.192:8276/;'),
+    RadioStation("El Gouna", 100, "http://82.201.132.237:8000"),
+    RadioStation('TIBA Radio', 0.0, 'http://s1.voscast.com:10026/;'),
+    RadioStation(
+      "Mega FM",
+      92.7,
+      "https://audiostreaming.twesto.com/megafm214",
+    ),
+    RadioStation(
+      "El-Radio 90.90 FM",
+      90.90,
+      "http://9090streaming.mobtada.com/9090FMEGYPT",
+    ),
+    RadioStation(
       "Mix FM",
       87.8,
       "http://196.219.52.61:8000/;?type=http%26nocache=20",
@@ -105,49 +131,27 @@ class StationList {
       "https://audiostreaming.twesto.com/radiohits215",
     ),
     RadioStation(
-      "Radio Masr",
-      88.7,
-      "https://streaming.radio.co/scc13a6b96/listen",
-    ),
-    RadioStation(
-      "Mega FM",
-      92.7,
-      "https://audiostreaming.twesto.com/megafm214",
-    ),
-    RadioStation(
-      "Nogoum FM",
-      100.6,
-      "http://ice31.securenetsystems.net/NOGOUM",
-    ),
-    RadioStation(
-      "95 FM",
-      95,
-      "http://178.32.62.154:9010/;",
-    ),
-    RadioStation(
-      "El Gouna",
-      100,
-      "http://82.201.132.237:8000",
-    ),
-    RadioStation(
-      "Nile FM",
-      104.2,
-      "https://reach-radio.esteam.rocks/radio/8010/live.mp3",
-    ),
-    RadioStation(
       "Mahatet Masr",
       0.0,
       "http://radio.mahatetmasr.com/mahatetmasr",
     ),
     RadioStation(
-      "El-Radio 90.90 FM",
-      90.90,
-      "http://9090streaming.mobtada.com/9090FMEGYPT",
+      'Monte Carlo Doualiya',
+      93.4,
+      'https://montecarlodoualiya128k.ice.infomaniak.ch/mc-doualiya.mp3',
     ),
     RadioStation(
-      "راديو القرآن الكريم",
-      98.2,
-      "https://livestreaming5.onlinehorizons.net/hls-live/Qurankareem/_definst_/liveevent/livestream.m3u8",
+      'BetterLife Radio',
+      0.0,
+      'http://stream.radiojar.com/8m2a8m9ymy5tv',
+    ),
+    RadioStation('محطة مصر', 0.0, 'http://listen.mahatetmasr.com/;'),
+    RadioStation("اف ام شعبي", 95.0, "http://178.32.62.154:9010/;"),
+    RadioStation('نغم اف ام', 105.3, 'https://ahmsamir.radioca.st/stream/;'),
+    RadioStation(
+      "Radio Masr",
+      88.7,
+      "https://streaming.radio.co/scc13a6b96/listen",
     ),
     RadioStation(
       "Radio Masr El-Gdida",
@@ -155,9 +159,29 @@ class StationList {
       "http://streaming.radio.co:80/scc13a6b96/listen",
     ),
     RadioStation(
+      "Nile FM",
+      104.2,
+      "http://ice31.securenetsystems.net/NILE",
+    ),
+    RadioStation('صوت شباب مصر', 0.0, 'http://www.egonair.com:8010/;'),
+    RadioStation(
+      "راديو القرآن الكريم",
+      98.2,
+      "https://livestreaming5.onlinehorizons.net/hls-live/Qurankareem/_definst_/liveevent/livestream.m3u8",
+    ),
+    RadioStation('راديو معاك', 0.0, 'http://radioma3ak.com:8000/;'),
+    RadioStation(
+      'راديو صوتك',
+      0.0,
+      'http://serv02.streamsfortheworld.com:8000/radiosotak_hi',
+    ),
+    RadioStation(
       "راديو مصر",
       88.7,
       "http://live.radiomasr.net:8060/RADIOMASR",
     ),
+    RadioStation('Radio Eltekia', 0.0, 'http://173.249.31.198:8000/stream/;'),
+    RadioStation('راديو موجة', 0.0, 'http://eu4.fastcast4u.com:5458/;'),
+    RadioStation('Radio Bridge', 0.0, 'http://213.136.85.197:9320/stream/;'),
   ];
 }
