@@ -6,7 +6,6 @@ import 'package:share/share.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
-import './screens/settings.dart';
 import './screens/stations.dart';
 import './widgets/bottom_navigation.dart';
 import './widgets/player.dart';
@@ -65,7 +64,6 @@ class _MyHomePageState extends State<MyHomePage> {
         selectStation: this._selectStation,
       ),
       FavoritesScreen(selectStation: this._selectStation),
-      SettingsScreen(),
     ];
   }
 
@@ -138,51 +136,32 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void refreshScreen(int index) {
-    /**
-     * 0 ~ StationsScreen()
-     * 2 ~ SettingsScreen()
-     */
     switch (index) {
       case 0:
-        {
-          setState(() {
-            this._screenTitle = "Stations";
-            _screens[0] = StationsScreen(
-              stations: _radioList,
-              selectStation: this._selectStation,
-            );
-          });
-        }
+        setState(() {
+          this._screenTitle = "Stations";
+          _screens[0] = StationsScreen(
+            stations: _radioList,
+            selectStation: this._selectStation,
+          );
+        });
         break;
       case 1:
-        {
-          setState(() {
-            this._screenTitle = "Favorites";
-            _screens[1] = FavoritesScreen(
-              selectStation: this._selectStation,
-            );
-          });
-        }
-        break;
-      case 2:
-        {
-          setState(() {
-            this._screenTitle = "Settings";
-            _screens[2] = SettingsScreen();
-          });
-        }
+        setState(() {
+          this._screenTitle = "Favorites";
+          _screens[1] = FavoritesScreen(
+            selectStation: this._selectStation,
+          );
+        });
         break;
       default:
-        {
-          setState(() {
-            _screens = [
-              StationsScreen(
-                  stations: _radioList, selectStation: this._selectStation),
-              FavoritesScreen(selectStation: this._selectStation),
-              SettingsScreen(),
-            ];
-          });
-        }
+        setState(() {
+          _screens = [
+            StationsScreen(
+                stations: _radioList, selectStation: this._selectStation),
+            FavoritesScreen(selectStation: this._selectStation),
+          ];
+        });
         break;
     }
   }
