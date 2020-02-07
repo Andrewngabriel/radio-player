@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:radio_player/screens/favorites.dart';
+import 'package:radio_player/utils/station_favorites.dart';
+import 'package:share/share.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
+import './screens/stations.dart';
 import './widgets/bottom_navigation.dart';
 import './widgets/player.dart';
-import './widgets/radio_card.dart';
 import 'utils/config.dart';
 
 void main() => runApp(MyApp());
@@ -16,7 +20,6 @@ class MyApp extends StatelessWidget {
       title: Config.title,
       theme: Config.themeOptions(context),
       home: MyHomePage(),
-      routes: Config.navigationRoutes(context),
     );
   }
 }
@@ -27,10 +30,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
-  bool _listLayoutState = false;
-  StationList _externalStationsList = new StationList();
-  List<RadioStation> _radioList = StationList.list;
+  // Keeps track of the array index of station array
+  int _selectedStationIndex = 0;
+  int _selectedPageIndex = 0;
+  RadioStation _chosenStation;
+  String _screenTitle = "Stations";
+  StationList stationList = StationList();
+  StationList _externalStationsList = StationList();
+
+  List<RadioStation> _radioList = List<RadioStation>();
+  List<RadioStation> _favoritesList = List<RadioStation>();
+  List<dynamic> _screens = List<dynamic>();
 
   _getMoreStations() {
     _externalStationsList.parseStreemaStationsInfo().then((stationsList) {
@@ -45,109 +55,114 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _getMoreStations();
+//    _getMoreStations();
+    this._radioList = stationList.radioList;
+    this._chosenStation = null;
+    _screens = [
+      StationsScreen(
+        stations: this._radioList,
+        selectStation: this._selectStation,
+      ),
+      FavoritesScreen(selectStation: this._selectStation),
+    ];
   }
 
-  void _selectStation(int index) async {
-    if (this._selectedIndex != index) {
+  void _selectStation(String url) async {
+    RadioStation station = this.stationList.findStation(url);
+    int index = this._radioList.indexOf(station);
+    if (this._selectedStationIndex != index || _chosenStation == null) {
       setState(() {
-        this._radioList[_selectedIndex].selected = false;
-        this._selectedIndex = index;
-        this._radioList[this._selectedIndex].selected = true;
+        this._radioList[_selectedStationIndex].selected = false;
+        this._selectedStationIndex = index;
+        this._radioList[this._selectedStationIndex].selected = true;
+        this._chosenStation = station;
       });
+      this.refreshScreen(_selectedPageIndex);
     }
   }
 
-  Widget _gridLayout() {
-    return GridView.count(
-      crossAxisCount: 3,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      padding: EdgeInsets.all(10.0),
-      children: _radioList.map((station) {
-        int index = _radioList.indexOf(station);
-        return RadioCard(
-          station.name,
-          station.frequency,
-          station.url,
-          index,
-          station.selected,
-          this._selectStation,
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _listLayout() {
-    return ListView(
-      children: _radioList.map((station) {
-        int index = _radioList.indexOf(station);
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5.0),
-          child: RadioCard(
-            station.name,
-            station.frequency,
-            station.url,
-            index,
-            station.selected,
-            this._selectStation,
-          ),
-        );
-      }).toList(),
-    );
+  void changeScreen(BuildContext ctx, int index) {
+    setState(() => _selectedPageIndex = index);
+    refreshScreen(_selectedPageIndex);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0.0,
-        title: Text("Stations", style: TextStyle(color: Colors.white)),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(
-              Icons.list,
-              color: Colors.white,
-              size: 35,
-            ),
-            padding: EdgeInsets.only(right: 5.0),
-            onPressed: () {
-              setState(() => _listLayoutState = true);
-            },
+    // Use the value constructor instead of the default because StationFavorites
+    // is a singleton, we cannot construct more than one instance of it.
+    return ChangeNotifierProvider.value(
+        value: StationFavorites(),
+        child: Scaffold(
+          appBar: AppBar(
+            elevation: 0.0,
+            title:
+                Text(this._screenTitle, style: TextStyle(color: Colors.white)),
+            actions: <Widget>[
+              IconButton(
+                icon: Icon(
+                  Icons.share,
+                  color: Colors.white,
+                  size: 35,
+                ),
+                padding: EdgeInsets.only(right: 5.0),
+                onPressed: () => Share.share(
+                  Config.share_msg,
+                  subject: Config.share_subject,
+                ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: Icon(
-              Icons.view_column,
-              color: Colors.white,
-              size: 35,
+          body: this._screens[this._selectedPageIndex],
+          bottomNavigationBar: Container(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Player(
+                  station: _chosenStation,
+                  stations: _radioList,
+                  selectStation: this._selectStation,
+                  index: _selectedStationIndex,
+                ),
+                BottomNavigation(
+                  changeScreen: this.changeScreen,
+                  menuIndex: this._selectedPageIndex,
+                ),
+              ],
             ),
-            padding: EdgeInsets.only(right: 5.0),
-            onPressed: () {
-              setState(() => _listLayoutState = false);
-            },
           ),
-        ],
-      ),
-      body: Container(
-        decoration: Config.backgroundGradient(),
-        child: (_listLayoutState) ? _listLayout() : _gridLayout(),
-      ),
-      bottomNavigationBar: Container(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: <Widget>[
-            Player(
-              title: _radioList[_selectedIndex].name,
-              freq: _radioList[_selectedIndex].frequency,
-              url: _radioList[_selectedIndex].url,
-              index: _selectedIndex,
-            ),
-            BottomNavigation(),
-          ],
-        ),
-      ),
-    );
+        ));
+  }
+
+  void refreshScreen(int index) {
+    switch (index) {
+      case 0:
+        setState(() {
+          this._screenTitle = "Stations";
+          _screens[0] = StationsScreen(
+            stations: _radioList,
+            selectStation: this._selectStation,
+          );
+        });
+        break;
+      case 1:
+        setState(() {
+          this._screenTitle = "Favorites";
+          _screens[1] = FavoritesScreen(
+            selectStation: this._selectStation,
+          );
+        });
+        break;
+      default:
+        setState(() {
+          _screens = [
+            StationsScreen(
+                stations: _radioList, selectStation: this._selectStation),
+            FavoritesScreen(selectStation: this._selectStation),
+          ];
+        });
+        break;
+    }
   }
 }

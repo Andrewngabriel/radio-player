@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../screens/favorites.dart';
-
 class Config {
   static const String title = "Egypt Radio";
-
-  static Map<String, WidgetBuilder> navigationRoutes(BuildContext context) {
-    return {
-      '/favorites': (context) => FavoritesScreen(),
-    };
-  }
+  static const String share_msg =
+      "Listen to Egyptian radio for free without any ads http://egy.fm";
+  static const String share_subject = "Listen to Egyptian Radio";
 
   static ThemeData themeOptions(BuildContext context) {
     return ThemeData(
