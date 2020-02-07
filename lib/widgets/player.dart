@@ -10,6 +10,7 @@ import 'package:radio_player/utils/station_favorites.dart';
 import '../models/radio_station.dart';
 
 const String STREAM_TIME_OUT_ERROR = 'Error: Stream timed out.';
+const int STREAM_TIME_OUT_DURATION = 15;
 
 class Player extends StatefulWidget {
   final RadioStation station;
@@ -238,7 +239,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
             child: Padding(
               padding: const EdgeInsets.only(top: 10.0),
               child: Text(
-                "${widget.station?.name}, ${widget.station?.frequency}",
+                "${widget.station?.name} ${(widget.station?.frequency != 0.0) ? ', ${widget.station?.frequency}' : ''}",
                 style: TextStyle(color: Colors.white, fontSize: 20.0),
               ),
             ),
@@ -364,7 +365,8 @@ class MyBackgroundTask extends BackgroundAudioTask {
       } else {
         return SUCCESS;
       }
-    }).timeout(Duration(seconds: 10), onTimeout: () async => TIMEOUT);
+    }).timeout(Duration(seconds: STREAM_TIME_OUT_DURATION),
+        onTimeout: () async => TIMEOUT);
     var result = await future;
     if (result == SUCCESS) {
       return true;
