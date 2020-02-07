@@ -35,14 +35,16 @@ class RadioCard extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
-            Text(
-              this.station.frequency.toString(),
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
-              ),
-            ),
+             (this.station.frequency != 0.0)
+                ? Text(
+                    this.station.frequency.toString(),
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  )
+                : Text(''),
           ],
         ),
       ),
