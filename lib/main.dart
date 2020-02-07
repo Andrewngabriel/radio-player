@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:radio_player/screens/favorites.dart';
 import 'package:radio_player/utils/station_favorites.dart';
+import 'package:share/share.dart';
 
 import './models/radio_station.dart';
 import './models/station_list.dart';
@@ -106,7 +107,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   size: 35,
                 ),
                 padding: EdgeInsets.only(right: 5.0),
-                onPressed: null,
+                onPressed: () => Share.share(
+                  Config.share_msg,
+                  subject: Config.share_subject,
+                ),
               ),
             ],
           ),
